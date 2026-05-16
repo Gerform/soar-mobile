@@ -55,6 +55,31 @@ class LoginViewModel(
     private fun login() {
         val currentState = state.value
 
+        val usernameError = if (currentState.username.isBlank()) {
+            "Username is required"
+        } else {
+            null
+        }
+
+        val passwordError = if (currentState.password.isBlank()) {
+            "Password is required"
+        } else {
+            null
+        }
+
+        if (usernameError != null || passwordError != null) {
+            _state.update {
+                it.copy(
+                    usernameError = usernameError,
+                    passwordError = passwordError,
+                    generalError = null,
+                    isLoading = false
+                )
+            }
+
+            return
+        }
+
         viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -93,7 +118,6 @@ class LoginViewModel(
             }
         }
     }
-
     private fun handleError(error: AppError) {
         when (error) {
             is AppError.Validation -> {

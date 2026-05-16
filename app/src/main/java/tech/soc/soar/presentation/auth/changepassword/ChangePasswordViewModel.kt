@@ -63,6 +63,32 @@ class ChangePasswordViewModel(
     private fun changePassword() {
         val currentState = state.value
 
+        val oldPasswordError = if (currentState.oldPassword.isBlank()) {
+            "Old password is required"
+        } else {
+            null
+        }
+
+        val newPasswordError = if (currentState.newPassword.isBlank()) {
+            "New password is required"
+        } else {
+            null
+        }
+
+        if (oldPasswordError != null || newPasswordError != null) {
+            _state.update {
+                it.copy(
+                    oldPasswordError = oldPasswordError,
+                    newPasswordError = newPasswordError,
+                    generalError = null,
+                    successMessage = null,
+                    isLoading = false
+                )
+            }
+
+            return
+        }
+
         viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -102,7 +128,6 @@ class ChangePasswordViewModel(
             }
         }
     }
-
     private fun handleError(error: AppError) {
         val message = error.message
 
