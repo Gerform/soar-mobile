@@ -22,7 +22,14 @@ import tech.soc.soar.presentation.auth.twofactor.TwoFactorScreen
 import tech.soc.soar.presentation.auth.twofactor.TwoFactorEffect
 import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModel
 import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModelFactory
+import tech.soc.soar.presentation.auth.changepassword.ChangePasswordEffect
+import tech.soc.soar.presentation.auth.changepassword.ChangePasswordScreen
+import tech.soc.soar.presentation.auth.changepassword.ChangePasswordViewModel
+import tech.soc.soar.presentation.auth.changepassword.ChangePasswordViewModelFactory
+import tech.soc.soar.presentation.home.HomeEffect
 import tech.soc.soar.presentation.home.HomeScreen
+import tech.soc.soar.presentation.home.HomeViewModel
+import tech.soc.soar.presentation.home.HomeViewModelFactory
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
 
@@ -123,7 +130,63 @@ fun AppNavGraph(
                 }
 
                 composable(AppRoutes.HOME) {
-                    HomeScreen()
+                    val homeViewModel: HomeViewModel = viewModel(
+                        factory = HomeViewModelFactory(
+                            logoutUseCase = AppDependencies.logoutUseCase
+                        )
+                    )
+
+                    val homeState by homeViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        homeViewModel.effect.collect { effect ->
+                            when (effect) {
+                                HomeEffect.NavigateToLogin -> {
+                                    rootViewModel.onLoggedOut()
+
+                                    navController.navigate(AppRoutes.LOGIN) {
+                                        popUpTo(0) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+
+                                HomeEffect.NavigateToChangePassword -> {
+                                    navController.navigate(AppRoutes.CHANGE_PASSWORD)
+                                }
+                            }
+                        }
+                    }
+
+                    HomeScreen(
+                        state = homeState,
+                        onEvent = homeViewModel::onEvent
+                    )
+                }
+
+                composable(AppRoutes.CHANGE_PASSWORD) {
+                    val changePasswordViewModel: ChangePasswordViewModel = viewModel(
+                        factory = ChangePasswordViewModelFactory(
+                            changePasswordUseCase = AppDependencies.changePasswordUseCase
+                        )
+                    )
+
+                    val changePasswordState by changePasswordViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        changePasswordViewModel.effect.collect { effect ->
+                            when (effect) {
+                                ChangePasswordEffect.NavigateBack -> {
+                                    navController.popBackStack()
+                                }
+                            }
+                        }
+                    }
+
+                    ChangePasswordScreen(
+                        state = changePasswordState,
+                        onEvent = changePasswordViewModel::onEvent
+                    )
                 }
             }
         }
