@@ -19,6 +19,9 @@ import tech.soc.soar.presentation.auth.login.LoginScreen
 import tech.soc.soar.presentation.auth.login.LoginViewModel
 import tech.soc.soar.presentation.auth.login.LoginViewModelFactory
 import tech.soc.soar.presentation.auth.twofactor.TwoFactorScreen
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorEffect
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModel
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModelFactory
 import tech.soc.soar.presentation.home.HomeScreen
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
@@ -89,7 +92,34 @@ fun AppNavGraph(
                 }
 
                 composable(AppRoutes.TWO_FACTOR) {
-                    TwoFactorScreen()
+                    val twoFactorViewModel: TwoFactorViewModel = viewModel(
+                        factory = TwoFactorViewModelFactory(
+                            confirmTwoFactorUseCase = AppDependencies.confirmTwoFactorUseCase
+                        )
+                    )
+
+                    val twoFactorState by twoFactorViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        twoFactorViewModel.effect.collect { effect ->
+                            when (effect) {
+                                TwoFactorEffect.NavigateToHome -> {
+                                    rootViewModel.onTwoFactorConfirmed()
+
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.TWO_FACTOR) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    TwoFactorScreen(
+                        state = twoFactorState,
+                        onEvent = twoFactorViewModel::onEvent
+                    )
                 }
 
                 composable(AppRoutes.HOME) {

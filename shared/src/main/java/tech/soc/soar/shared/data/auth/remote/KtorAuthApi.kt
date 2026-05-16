@@ -2,8 +2,11 @@ package tech.soc.soar.shared.data.auth.remote
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.RedirectResponseException
+import io.ktor.client.plugins.ServerResponseException
+import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.bearerAuth
-import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -103,15 +106,21 @@ class KtorAuthApi(
                 setBody(body)
             }
 
-            if (response.status.value in 200..299) {
+            if (response.status.value in SUCCESS_STATUS_RANGE) {
                 AppResult.Success(response.body())
             } else {
                 AppResult.Error(ApiErrorMapper.map(response))
             }
+        } catch (exception: ClientRequestException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: ServerResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: RedirectResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
         } catch (exception: Exception) {
             AppResult.Error(
                 AppError.Network(
-                    message = exception.message ?: "Network error"
+                    message = "Failed to connect to server"
                 )
             )
         }
@@ -130,21 +139,27 @@ class KtorAuthApi(
                 }
             }
 
-            if (response.status.value in 200..299) {
+            if (response.status.value in SUCCESS_STATUS_RANGE) {
                 AppResult.Success(response.body())
             } else {
                 AppResult.Error(ApiErrorMapper.map(response))
             }
+        } catch (exception: ClientRequestException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: ServerResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: RedirectResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
         } catch (exception: Exception) {
             AppResult.Error(
                 AppError.Network(
-                    message = exception.message ?: "Network error"
+                    message = "Failed to connect to server"
                 )
             )
         }
     }
 
-    private suspend fun io.ktor.client.request.HttpRequestBuilder.addAuthHeader() {
+    private suspend fun HttpRequestBuilder.addAuthHeader() {
         val accessToken = tokenProvider.getAccessToken()
 
         if (!accessToken.isNullOrBlank()) {
@@ -154,5 +169,9 @@ class KtorAuthApi(
 
     private fun buildUrl(path: String): String {
         return apiConfig.baseUrl.trimEnd('/') + path
+    }
+
+    private companion object {
+        val SUCCESS_STATUS_RANGE = 200..299
     }
 }

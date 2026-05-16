@@ -137,15 +137,6 @@ class LoginViewModel(
     }
 
     private fun AppError.toUserMessage(): String {
-        return when (this) {
-            is AppError.BadRequest -> message
-            is AppError.Forbidden -> message
-            is AppError.Network -> message
-            is AppError.NotFound -> message
-            is AppError.Server -> message
-            is AppError.Unauthorized -> message
-            is AppError.Unknown -> message
-            is AppError.Validation -> message
-        }
+        return message
     }
 }
