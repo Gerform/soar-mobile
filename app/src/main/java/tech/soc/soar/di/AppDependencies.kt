@@ -19,7 +19,7 @@ import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
 
 object AppDependencies {
-    private const val AUTH_BASE_URL = "http://192.168.184.128:8000"
+    private const val AUTH_BASE_URL = "http://192.168.0.244:8000"
 
     private var initialized: Boolean = false
 

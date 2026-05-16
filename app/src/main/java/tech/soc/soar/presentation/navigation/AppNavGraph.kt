@@ -1,0 +1,111 @@
+package tech.soc.soar.presentation.navigation
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import tech.soc.soar.di.AppDependencies
+import tech.soc.soar.presentation.auth.login.LoginEffect
+import tech.soc.soar.presentation.auth.login.LoginScreen
+import tech.soc.soar.presentation.auth.login.LoginViewModel
+import tech.soc.soar.presentation.auth.login.LoginViewModelFactory
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorScreen
+import tech.soc.soar.presentation.home.HomeScreen
+import tech.soc.soar.presentation.root.RootUiState
+import tech.soc.soar.presentation.root.RootViewModel
+
+@Composable
+fun AppNavGraph(
+    rootViewModel: RootViewModel
+) {
+    val rootState by rootViewModel.state.collectAsState()
+    val navController = rememberNavController()
+
+    when (rootState) {
+        RootUiState.Loading -> {
+            LoadingScreen()
+        }
+
+        else -> {
+            val startDestination = when (rootState) {
+                RootUiState.Unauthenticated -> AppRoutes.LOGIN
+                RootUiState.RequiresTwoFactor -> AppRoutes.TWO_FACTOR
+                RootUiState.Authenticated -> AppRoutes.HOME
+                RootUiState.Loading -> AppRoutes.LOGIN
+            }
+
+            NavHost(
+                navController = navController,
+                startDestination = startDestination
+            ) {
+                composable(AppRoutes.LOGIN) {
+                    val loginViewModel: LoginViewModel = viewModel(
+                        factory = LoginViewModelFactory(
+                            loginUseCase = AppDependencies.loginUseCase
+                        )
+                    )
+
+                    val loginState by loginViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        loginViewModel.effect.collect { effect ->
+                            when (effect) {
+                                LoginEffect.NavigateToHome -> {
+                                    rootViewModel.onLoggedIn()
+
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.LOGIN) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+
+                                LoginEffect.NavigateToTwoFactor -> {
+                                    rootViewModel.onLoggedIn()
+
+                                    navController.navigate(AppRoutes.TWO_FACTOR) {
+                                        popUpTo(AppRoutes.LOGIN) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    LoginScreen(
+                        state = loginState,
+                        onEvent = loginViewModel::onEvent
+                    )
+                }
+
+                composable(AppRoutes.TWO_FACTOR) {
+                    TwoFactorScreen()
+                }
+
+                composable(AppRoutes.HOME) {
+                    HomeScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadingScreen() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}

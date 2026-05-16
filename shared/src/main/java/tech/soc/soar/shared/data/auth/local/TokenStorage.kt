@@ -17,5 +17,13 @@ interface TokenStorage {
         tokenType: String
     )
 
+    suspend fun saveNeedTwoFactor(value: Boolean)
+
+    suspend fun getNeedTwoFactor(): Boolean
+
+    suspend fun saveRoles(roles: List<String>)
+
+    suspend fun getRoles(): List<String>
+
     suspend fun clear()
 }

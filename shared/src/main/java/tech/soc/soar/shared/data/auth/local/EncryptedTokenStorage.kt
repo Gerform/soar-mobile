@@ -3,11 +3,17 @@ package tech.soc.soar.shared.data.auth.local
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import tech.soc.soar.shared.domain.auth.model.AuthTokens
 
 class EncryptedTokenStorage(
     context: Context
 ) : TokenStorage {
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+    }
 
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -51,6 +57,33 @@ class EncryptedTokenStorage(
             .apply()
     }
 
+    override suspend fun saveNeedTwoFactor(value: Boolean) {
+        preferences.edit()
+            .putBoolean(KEY_NEED_TWO_FACTOR, value)
+            .apply()
+    }
+
+    override suspend fun getNeedTwoFactor(): Boolean {
+        return preferences.getBoolean(KEY_NEED_TWO_FACTOR, false)
+    }
+
+    override suspend fun saveRoles(roles: List<String>) {
+        preferences.edit()
+            .putString(KEY_ROLES, json.encodeToString(roles))
+            .apply()
+    }
+
+    override suspend fun getRoles(): List<String> {
+        val rawRoles = preferences.getString(KEY_ROLES, null)
+            ?: return emptyList()
+
+        return try {
+            json.decodeFromString<List<String>>(rawRoles)
+        } catch (exception: Exception) {
+            emptyList()
+        }
+    }
+
     override suspend fun clear() {
         preferences.edit().clear().apply()
     }
@@ -61,5 +94,7 @@ class EncryptedTokenStorage(
         const val KEY_ACCESS_TOKEN = "access_token"
         const val KEY_REFRESH_TOKEN = "refresh_token"
         const val KEY_TOKEN_TYPE = "token_type"
+        const val KEY_NEED_TWO_FACTOR = "need_two_factor"
+        const val KEY_ROLES = "roles"
     }
 }

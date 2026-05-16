@@ -1,48 +1,35 @@
 package tech.soc.soar
-import tech.soc.soar.shared.core.AppInfo
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import tech.soc.soar.di.AppDependencies
+import tech.soc.soar.presentation.navigation.AppNavGraph
+import tech.soc.soar.presentation.root.RootViewModel
+import tech.soc.soar.presentation.root.RootViewModelFactory
 import tech.soc.soar.ui.theme.SoarTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
         setContent {
             SoarTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                val rootViewModel: RootViewModel = viewModel(
+                    factory = RootViewModelFactory(
+                        checkSessionUseCase = AppDependencies.checkSessionUseCase
                     )
-                }
+                )
+
+                AppNavGraph(
+                    rootViewModel = rootViewModel
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello ${AppInfo.name}!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    SoarTheme {
-        Greeting("Android")
     }
 }

@@ -15,6 +15,9 @@ class SessionRepositoryImpl(
 
     override suspend fun saveSession(session: AuthSession) {
         tokenStorage.saveTokens(session.tokens)
+        tokenStorage.saveRoles(session.roles)
+        tokenStorage.saveNeedTwoFactor(session.needTwoFactor)
+
         userSessionCache.saveRoles(session.roles)
         userSessionCache.saveNeedTwoFactor(session.needTwoFactor)
 
@@ -36,15 +39,18 @@ class SessionRepositoryImpl(
             return null
         }
 
+        val roles = tokenStorage.getRoles()
+        val needTwoFactor = tokenStorage.getNeedTwoFactor()
+
         return AuthSession(
             tokens = AuthTokens(
                 accessToken = accessToken,
                 refreshToken = refreshToken,
                 tokenType = tokenType
             ),
-            roles = userSessionCache.getRoles(),
+            roles = roles,
             user = userSessionCache.getUser(),
-            needTwoFactor = userSessionCache.getNeedTwoFactor()
+            needTwoFactor = needTwoFactor
         )
     }
 
@@ -61,6 +67,8 @@ class SessionRepositoryImpl(
     override suspend fun saveCurrentUser(user: CurrentUser) {
         userSessionCache.saveUser(user)
         userSessionCache.saveRoles(user.roles)
+
+        tokenStorage.saveRoles(user.roles)
     }
 
     override suspend fun getCurrentUser(): CurrentUser? {
