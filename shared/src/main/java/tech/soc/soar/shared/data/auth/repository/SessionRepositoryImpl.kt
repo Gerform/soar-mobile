@@ -7,10 +7,12 @@ import tech.soc.soar.shared.domain.auth.model.AuthTokens
 import tech.soc.soar.shared.domain.auth.model.CurrentUser
 import tech.soc.soar.shared.domain.auth.model.SessionState
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
+import tech.soc.soar.shared.domain.account.repository.AccountRepository
 
 class SessionRepositoryImpl(
     private val tokenStorage: TokenStorage,
-    private val userSessionCache: UserSessionCache
+    private val userSessionCache: UserSessionCache,
+    private val accountRepository: AccountRepository
 ) : SessionRepository {
 
     override suspend fun saveSession(session: AuthSession) {
@@ -69,6 +71,8 @@ class SessionRepositoryImpl(
         userSessionCache.saveRoles(user.roles)
 
         tokenStorage.saveRoles(user.roles)
+
+        accountRepository.saveLoggedInUser(user)
     }
 
     override suspend fun getCurrentUser(): CurrentUser? {

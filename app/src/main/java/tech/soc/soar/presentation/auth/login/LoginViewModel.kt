@@ -11,11 +11,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.error.AppError
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
+import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
 import tech.soc.soar.shared.domain.auth.model.LoginResult
 import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 
 class LoginViewModel(
-    private val loginUseCase: LoginUseCase
+    private val loginUseCase: LoginUseCase,
+    private val getSavedAccountsUseCase: GetSavedAccountsUseCase,
+    private val getLastUsedAccountUseCase: GetLastUsedAccountUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -23,6 +27,11 @@ class LoginViewModel(
 
     private val _effect = Channel<LoginEffect>()
     val effect = _effect.receiveAsFlow()
+
+    init {
+        observeSavedAccounts()
+        loadLastUsedAccount()
+    }
 
     fun onEvent(event: LoginEvent) {
         when (event) {
@@ -48,6 +57,69 @@ class LoginViewModel(
 
             LoginEvent.Submit -> {
                 login()
+            }
+
+            LoginEvent.OtherAccountClicked -> {
+                _state.update {
+                    it.copy(
+                        isAccountPickerVisible = true,
+                        generalError = null
+                    )
+                }
+            }
+
+            is LoginEvent.SavedAccountSelected -> {
+                _state.update {
+                    it.copy(
+                        username = event.account.username,
+                        password = "",
+                        usernameError = null,
+                        passwordError = null,
+                        generalError = null,
+                        isAccountPickerVisible = false
+                    )
+                }
+            }
+
+            LoginEvent.AddNewUserClicked -> {
+                _state.update {
+                    it.copy(
+                        username = "",
+                        password = "",
+                        usernameError = null,
+                        passwordError = null,
+                        generalError = null,
+                        isAccountPickerVisible = false
+                    )
+                }
+            }
+
+            LoginEvent.DismissAccountPicker -> {
+                _state.update {
+                    it.copy(isAccountPickerVisible = false)
+                }
+            }
+        }
+    }
+
+    private fun observeSavedAccounts() {
+        viewModelScope.launch {
+            getSavedAccountsUseCase().collect { accounts ->
+                _state.update {
+                    it.copy(savedAccounts = accounts)
+                }
+            }
+        }
+    }
+
+    private fun loadLastUsedAccount() {
+        viewModelScope.launch {
+            val account = getLastUsedAccountUseCase()
+
+            if (account != null && state.value.username.isBlank()) {
+                _state.update {
+                    it.copy(username = account.username)
+                }
             }
         }
     }
@@ -118,6 +190,7 @@ class LoginViewModel(
             }
         }
     }
+
     private fun handleError(error: AppError) {
         when (error) {
             is AppError.Validation -> {
@@ -153,14 +226,10 @@ class LoginViewModel(
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        generalError = error.toUserMessage()
+                        generalError = error.message
                     )
                 }
             }
         }
-    }
-
-    private fun AppError.toUserMessage(): String {
-        return message
     }
 }

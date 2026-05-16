@@ -60,7 +60,9 @@ fun AppNavGraph(
                 composable(AppRoutes.LOGIN) {
                     val loginViewModel: LoginViewModel = viewModel(
                         factory = LoginViewModelFactory(
-                            loginUseCase = AppDependencies.loginUseCase
+                            loginUseCase = AppDependencies.loginUseCase,
+                            getSavedAccountsUseCase = AppDependencies.getSavedAccountsUseCase,
+                            getLastUsedAccountUseCase = AppDependencies.getLastUsedAccountUseCase
                         )
                     )
 

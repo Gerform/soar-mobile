@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +63,8 @@ fun LoginScreen(
             Text(
                 text = state.usernameError,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -86,21 +88,32 @@ fun LoginScreen(
             Text(
                 text = state.passwordError,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
+        TextButton(
+            onClick = {
+                onEvent(LoginEvent.OtherAccountClicked)
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Log in to another account")
+        }
+
         if (state.generalError != null) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = state.generalError,
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
@@ -115,5 +128,59 @@ fun LoginScreen(
                 Text("Login")
             }
         }
+    }
+
+    if (state.isAccountPickerVisible) {
+        AlertDialog(
+            onDismissRequest = {
+                onEvent(LoginEvent.DismissAccountPicker)
+            },
+            title = {
+                Text("Choose account")
+            },
+            text = {
+                Column {
+                    state.savedAccounts.forEach { account ->
+                        TextButton(
+                            onClick = {
+                                onEvent(LoginEvent.SavedAccountSelected(account))
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Text(account.username)
+
+                                Text(
+                                    text = account.mail,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    TextButton(
+                        onClick = {
+                            onEvent(LoginEvent.AddNewUserClicked)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Add new user")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        onEvent(LoginEvent.DismissAccountPicker)
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

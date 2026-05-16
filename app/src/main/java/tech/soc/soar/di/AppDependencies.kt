@@ -2,6 +2,7 @@ package tech.soc.soar.di
 
 import android.content.Context
 import tech.soc.soar.shared.core.network.ApiConfig
+import tech.soc.soar.shared.data.account.repository.AccountRepositoryFactory
 import tech.soc.soar.shared.data.auth.local.AuthTokenProvider
 import tech.soc.soar.shared.data.auth.local.EncryptedTokenStorage
 import tech.soc.soar.shared.data.auth.local.UserSessionCache
@@ -9,6 +10,10 @@ import tech.soc.soar.shared.data.auth.remote.AuthApi
 import tech.soc.soar.shared.data.auth.remote.AuthApiFactory
 import tech.soc.soar.shared.data.auth.repository.AuthRepositoryImpl
 import tech.soc.soar.shared.data.auth.repository.SessionRepositoryImpl
+import tech.soc.soar.shared.data.database.AppDatabase
+import tech.soc.soar.shared.domain.account.repository.AccountRepository
+import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
+import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
 import tech.soc.soar.shared.domain.auth.repository.AuthRepository
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
 import tech.soc.soar.shared.domain.auth.usecase.ChangePasswordUseCase
@@ -19,6 +24,7 @@ import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
 
 object AppDependencies {
+
     private const val AUTH_BASE_URL = "http://192.168.0.244:8000"
 
     private var initialized: Boolean = false
@@ -50,10 +56,20 @@ object AppDependencies {
     lateinit var changePasswordUseCase: ChangePasswordUseCase
         private set
 
+    lateinit var getSavedAccountsUseCase: GetSavedAccountsUseCase
+        private set
+
+    lateinit var getLastUsedAccountUseCase: GetLastUsedAccountUseCase
+        private set
+
     fun initialize(context: Context) {
         if (initialized) return
 
         val appContext = context.applicationContext
+
+        val accountRepository: AccountRepository = AccountRepositoryFactory.create(
+            context = appContext
+        )
 
         val apiConfig = ApiConfig(
             baseUrl = AUTH_BASE_URL
@@ -80,7 +96,8 @@ object AppDependencies {
 
         sessionRepository = SessionRepositoryImpl(
             tokenStorage = tokenStorage,
-            userSessionCache = userSessionCache
+            userSessionCache = userSessionCache,
+            accountRepository = accountRepository
         )
 
         loginUseCase = LoginUseCase(
@@ -111,5 +128,14 @@ object AppDependencies {
             authRepository = authRepository
         )
 
+        getSavedAccountsUseCase = GetSavedAccountsUseCase(
+            accountRepository = accountRepository
+        )
+
+        getLastUsedAccountUseCase = GetLastUsedAccountUseCase(
+            accountRepository = accountRepository
+        )
+
         initialized = true
-    }}
+    }
+}
