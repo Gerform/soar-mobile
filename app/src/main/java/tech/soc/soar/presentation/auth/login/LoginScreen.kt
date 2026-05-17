@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.AlertDialog
@@ -43,6 +47,8 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
@@ -155,7 +161,11 @@ fun LoginScreen(
                 Text("Choose account")
             },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 360.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
                     state.savedAccounts.forEach { account ->
                         val isSelected = state.selectedAccountUid == account.uid
 

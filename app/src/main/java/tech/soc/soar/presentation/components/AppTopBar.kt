@@ -4,10 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,7 +34,11 @@ fun AppTopBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .statusBarsPadding(),
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                )
+            ),
         color = MaterialTheme.colorScheme.primaryContainer,
         tonalElevation = 3.dp,
         shadowElevation = 2.dp

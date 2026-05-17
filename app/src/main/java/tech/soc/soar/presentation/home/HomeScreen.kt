@@ -6,13 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -44,99 +46,49 @@ fun HomeScreen(
             onEvent(HomeEvent.LogoutClicked)
         }
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
         ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                when {
+                    state.isLoading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    state.spaces.isEmpty() -> {
+                        Text(
+                            text = "No available spaces",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    else -> {
+                        SpacesGrid(
+                            spaces = state.spaces,
+                            onSpaceClick = { space ->
+                                onEvent(HomeEvent.SpaceClicked(space))
+                            }
+                        )
+                    }
                 }
 
-                state.spaces.isEmpty() -> {
+                if (state.error != null) {
                     Text(
-                        text = "No available spaces",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.align(Alignment.Center)
+                        text = state.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
-                }
-
-                state.spaces.size == 1 -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 72.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Choose space",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 32.dp)
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        SpaceCircleButton(
-                            spaceName = state.spaces.first(),
-                            gradient = spaceGradient(0),
-                            modifier = Modifier.size(150.dp),
-                            onClick = {
-                                onEvent(HomeEvent.SpaceClicked(state.spaces.first()))
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-
-                else -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 72.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Choose space",
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 32.dp)
-                        )
-
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 32.dp),
-                            contentPadding = PaddingValues(bottom = 24.dp),
-                            horizontalArrangement = Arrangement.spacedBy(28.dp),
-                            verticalArrangement = Arrangement.spacedBy(32.dp)
-                        ) {
-                            itemsIndexed(state.spaces) { index, space ->
-                                SpaceCircleButton(
-                                    spaceName = space,
-                                    gradient = spaceGradient(index),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .aspectRatio(1f),
-                                    onClick = {
-                                        onEvent(HomeEvent.SpaceClicked(space))
-                                    }
-                                )
-                            }
-                        }
-                    }
                 }
             }
 
@@ -146,10 +98,85 @@ fun HomeScreen(
                 },
                 enabled = !state.isLoading,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 18.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .navigationBarsPadding()
+                    .padding(bottom = 8.dp)
             ) {
                 Text("Change password")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpacesGrid(
+    spaces: List<String>,
+    onSpaceClick: (String) -> Unit
+) {
+    val columns = if (spaces.size == 1) {
+        GridCells.Fixed(1)
+    } else {
+        GridCells.Fixed(2)
+    }
+
+    LazyVerticalGrid(
+        columns = columns,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = 28.dp,
+            bottom = 24.dp
+        ),
+        horizontalArrangement = Arrangement.spacedBy(28.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp)
+    ) {
+        item(
+            span = {
+                GridItemSpan(maxLineSpan)
+            }
+        ) {
+            Text(
+                text = "Choose space",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (spaces.size == 1) {
+            item(
+                span = {
+                    GridItemSpan(maxLineSpan)
+                }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    SpaceCircleButton(
+                        spaceName = spaces.first(),
+                        gradient = spaceGradient(0),
+                        modifier = Modifier.size(150.dp),
+                        onClick = {
+                            onSpaceClick(spaces.first())
+                        }
+                    )
+                }
+            }
+        } else {
+            itemsIndexed(spaces) { index, space ->
+                SpaceCircleButton(
+                    spaceName = space,
+                    gradient = spaceGradient(index),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f),
+                    onClick = {
+                        onSpaceClick(space)
+                    }
+                )
             }
         }
     }
