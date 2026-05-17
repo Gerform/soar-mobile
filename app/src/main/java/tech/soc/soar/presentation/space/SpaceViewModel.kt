@@ -10,9 +10,12 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 
 class SpaceViewModel(
+    private val spaceName: String,
+    private val getAlertsPageUseCase: GetAlertsPageUseCase,
     private val logoutUseCase: LogoutUseCase
 ) : ViewModel() {
 
@@ -21,6 +24,10 @@ class SpaceViewModel(
 
     private val _effect = Channel<SpaceEffect>()
     val effect = _effect.receiveAsFlow()
+
+    init {
+        loadAlerts(page = 0)
+    }
 
     fun onEvent(event: SpaceEvent) {
         when (event) {
@@ -32,6 +39,69 @@ class SpaceViewModel(
 
             SpaceEvent.LogoutClicked -> {
                 logout()
+            }
+
+            SpaceEvent.NextPageClicked -> {
+                if (state.value.hasNextPage && !state.value.isLoading) {
+                    loadAlerts(page = state.value.page + 1)
+                }
+            }
+
+            SpaceEvent.PreviousPageClicked -> {
+                if (state.value.page > 0 && !state.value.isLoading) {
+                    loadAlerts(page = state.value.page - 1)
+                }
+            }
+
+            is SpaceEvent.AlertClicked -> {
+                viewModelScope.launch {
+                    _effect.send(
+                        SpaceEffect.NavigateToAlertDetails(
+                            alertId = event.alertId
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun loadAlerts(page: Int) {
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isLoading = true,
+                    error = null
+                )
+            }
+
+            when (
+                val result = getAlertsPageUseCase(
+                    spaceName = spaceName,
+                    page = page,
+                    pageSize = PAGE_SIZE
+                )
+            ) {
+                is AppResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            alerts = result.data.alerts,
+                            page = result.data.page,
+                            hasNextPage = result.data.hasNextPage,
+                            fromCache = result.data.fromCache,
+                            error = null
+                        )
+                    }
+                }
+
+                is AppResult.Error -> {
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.error.message
+                        )
+                    }
+                }
             }
         }
     }
@@ -53,5 +123,9 @@ class SpaceViewModel(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val PAGE_SIZE = 50
     }
 }

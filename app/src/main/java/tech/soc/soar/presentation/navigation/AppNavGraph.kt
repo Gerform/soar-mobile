@@ -14,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import tech.soc.soar.di.AppDependencies
+import tech.soc.soar.presentation.alertdetails.AlertDetailsScreen
 import tech.soc.soar.presentation.auth.login.LoginEffect
 import tech.soc.soar.presentation.auth.login.LoginScreen
 import tech.soc.soar.presentation.auth.login.LoginViewModel
@@ -217,6 +218,8 @@ fun AppNavGraph(
 
                     val spaceViewModel: SpaceViewModel = viewModel(
                         factory = SpaceViewModelFactory(
+                            spaceName = spaceName,
+                            getAlertsPageUseCase = AppDependencies.getAlertsPageUseCase,
                             logoutUseCase = AppDependencies.logoutUseCase
                         )
                     )
@@ -244,6 +247,14 @@ fun AppNavGraph(
                                         }
                                     }
                                 }
+                                is SpaceEffect.NavigateToAlertDetails -> {
+                                    navController.navigate(
+                                        AppRoutes.alertDetails(
+                                            spaceName = spaceName,
+                                            alertId = effect.alertId
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -252,6 +263,24 @@ fun AppNavGraph(
                         spaceName = spaceName,
                         state = spaceState,
                         onEvent = spaceViewModel::onEvent
+                    )
+                }
+                composable(AppRoutes.ALERT_DETAILS) { backStackEntry ->
+                    val alertId = backStackEntry.arguments
+                        ?.getString(AppRoutes.ALERT_ID_ARGUMENT)
+                        ?.toLongOrNull()
+                        ?: 0L
+
+                    AlertDetailsScreen(
+                        alertId = alertId,
+                        onHomeClick = {
+                            navController.navigate(AppRoutes.HOME) {
+                                popUpTo(AppRoutes.HOME) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
             }

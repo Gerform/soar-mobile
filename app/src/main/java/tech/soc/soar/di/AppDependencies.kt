@@ -3,6 +3,9 @@ package tech.soc.soar.di
 import android.content.Context
 import tech.soc.soar.shared.core.network.ApiConfig
 import tech.soc.soar.shared.data.account.repository.AccountRepositoryFactory
+import tech.soc.soar.shared.data.alert.remote.AlertApi
+import tech.soc.soar.shared.data.alert.remote.AlertApiFactory
+import tech.soc.soar.shared.data.alert.repository.AlertRepositoryFactory
 import tech.soc.soar.shared.data.auth.local.AuthTokenProvider
 import tech.soc.soar.shared.data.auth.local.EncryptedTokenStorage
 import tech.soc.soar.shared.data.auth.local.UserSessionCache
@@ -10,11 +13,12 @@ import tech.soc.soar.shared.data.auth.remote.AuthApi
 import tech.soc.soar.shared.data.auth.remote.AuthApiFactory
 import tech.soc.soar.shared.data.auth.repository.AuthRepositoryImpl
 import tech.soc.soar.shared.data.auth.repository.SessionRepositoryImpl
-import tech.soc.soar.shared.data.database.AppDatabase
 import tech.soc.soar.shared.domain.account.repository.AccountRepository
+import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
-import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
+import tech.soc.soar.shared.domain.alert.repository.AlertRepository
+import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
 import tech.soc.soar.shared.domain.auth.repository.AuthRepository
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
 import tech.soc.soar.shared.domain.auth.usecase.ChangePasswordUseCase
@@ -27,13 +31,20 @@ import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
 object AppDependencies {
 
     private const val AUTH_BASE_URL = "http://192.168.0.244:8000"
+    private const val ALERT_BASE_URL = "http://192.168.0.244:8080"
 
     private var initialized: Boolean = false
 
     lateinit var authApi: AuthApi
         private set
 
+    lateinit var alertApi: AlertApi
+        private set
+
     lateinit var authRepository: AuthRepository
+        private set
+
+    lateinit var alertRepository: AlertRepository
         private set
 
     lateinit var sessionRepository: SessionRepository
@@ -66,18 +77,13 @@ object AppDependencies {
     lateinit var deleteSavedAccountUseCase: DeleteSavedAccountUseCase
         private set
 
+    lateinit var getAlertsPageUseCase: GetAlertsPageUseCase
+        private set
+
     fun initialize(context: Context) {
         if (initialized) return
 
         val appContext = context.applicationContext
-
-        val accountRepository: AccountRepository = AccountRepositoryFactory.create(
-            context = appContext
-        )
-
-        val apiConfig = ApiConfig(
-            baseUrl = AUTH_BASE_URL
-        )
 
         val tokenStorage = EncryptedTokenStorage(
             context = appContext
@@ -90,8 +96,26 @@ object AppDependencies {
         )
 
         authApi = AuthApiFactory.create(
-            apiConfig = apiConfig,
+            apiConfig = ApiConfig(
+                baseUrl = AUTH_BASE_URL
+            ),
             tokenProvider = tokenProvider
+        )
+
+        alertApi = AlertApiFactory.create(
+            apiConfig = ApiConfig(
+                baseUrl = ALERT_BASE_URL
+            ),
+            tokenProvider = tokenProvider
+        )
+
+        val accountRepository: AccountRepository = AccountRepositoryFactory.create(
+            context = appContext
+        )
+
+        alertRepository = AlertRepositoryFactory.create(
+            context = appContext,
+            alertApi = alertApi
         )
 
         authRepository = AuthRepositoryImpl(
@@ -142,6 +166,11 @@ object AppDependencies {
 
         deleteSavedAccountUseCase = DeleteSavedAccountUseCase(
             accountRepository = accountRepository
+        )
+
+        getAlertsPageUseCase = GetAlertsPageUseCase(
+            alertRepository = alertRepository,
+            checkSessionUseCase = checkSessionUseCase
         )
 
         initialized = true
