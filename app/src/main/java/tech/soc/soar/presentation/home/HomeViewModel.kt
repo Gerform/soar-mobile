@@ -10,10 +10,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.auth.model.SessionState
+import tech.soc.soar.shared.domain.auth.model.UserRoles
+import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 
 class HomeViewModel(
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val checkSessionUseCase: CheckSessionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -21,6 +25,10 @@ class HomeViewModel(
 
     private val _effect = Channel<HomeEffect>()
     val effect = _effect.receiveAsFlow()
+
+    init {
+        loadSpaces()
+    }
 
     fun onEvent(event: HomeEvent) {
         when (event) {
@@ -30,12 +38,39 @@ class HomeViewModel(
                 }
             }
 
-            HomeEvent.LogoutClicked -> logout()
+            HomeEvent.LogoutClicked -> {
+                logout()
+            }
 
             HomeEvent.ChangePasswordClicked -> {
                 viewModelScope.launch {
                     _effect.send(HomeEffect.NavigateToChangePassword)
                 }
+            }
+
+            is HomeEvent.SpaceClicked -> {
+                viewModelScope.launch {
+                    _effect.send(HomeEffect.NavigateToSpace(event.spaceName))
+                }
+            }
+        }
+    }
+
+    private fun loadSpaces() {
+        viewModelScope.launch {
+            val sessionState = checkSessionUseCase()
+
+            val roles = when (sessionState) {
+                is SessionState.Authenticated -> sessionState.session.roles
+                is SessionState.RequiresTwoFactor -> sessionState.session.roles
+                SessionState.Loading,
+                SessionState.Unauthenticated -> emptyList()
+            }
+
+            val spaces = UserRoles.getSpaces(roles)
+
+            _state.update {
+                it.copy(spaces = spaces)
             }
         }
     }
@@ -49,7 +84,7 @@ class HomeViewModel(
                 )
             }
 
-            when (val result = logoutUseCase()) {
+            when (logoutUseCase()) {
                 is AppResult.Success -> {
                     _state.update {
                         it.copy(isLoading = false)

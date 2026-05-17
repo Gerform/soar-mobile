@@ -27,7 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import tech.soc.soar.shared.domain.account.model.SavedAccount
+import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.shared.domain.auth.model.UserRoles
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -35,13 +36,17 @@ fun LoginScreen(
     state: LoginUiState,
     onEvent: (LoginEvent) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    AppScreenScaffold(
+        isHomeClickable = false,
+        showLogout = false
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Text(
             text = "SOAR",
             style = MaterialTheme.typography.headlineLarge
@@ -193,7 +198,7 @@ fun LoginScreen(
                             Spacer(modifier = Modifier.width(12.dp))
 
                             Text(
-                                text = account.mainRole(),
+                                text = UserRoles.getMainRole(account.roles),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -260,17 +265,4 @@ fun LoginScreen(
             }
         )
     }
-}
-
-private val REQUIRED_USER_ROLES = setOf(
-    "admin",
-    "responder",
-    "guest",
-    "responsible"
-)
-
-private fun SavedAccount.mainRole(): String {
-    return roles.firstOrNull { it in REQUIRED_USER_ROLES }
-        ?: roles.firstOrNull()
-        ?: "unknown"
-}
+}}

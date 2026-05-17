@@ -32,6 +32,10 @@ import tech.soc.soar.presentation.home.HomeViewModel
 import tech.soc.soar.presentation.home.HomeViewModelFactory
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
+import tech.soc.soar.presentation.space.SpaceScreen
+import tech.soc.soar.presentation.space.SpaceEffect
+import tech.soc.soar.presentation.space.SpaceViewModel
+import tech.soc.soar.presentation.space.SpaceViewModelFactory
 
 @Composable
 fun AppNavGraph(
@@ -135,7 +139,8 @@ fun AppNavGraph(
                 composable(AppRoutes.HOME) {
                     val homeViewModel: HomeViewModel = viewModel(
                         factory = HomeViewModelFactory(
-                            logoutUseCase = AppDependencies.logoutUseCase
+                            logoutUseCase = AppDependencies.logoutUseCase,
+                            checkSessionUseCase = AppDependencies.checkSessionUseCase
                         )
                     )
 
@@ -151,6 +156,10 @@ fun AppNavGraph(
                                         }
                                         launchSingleTop = true
                                     }
+                                }
+
+                                is HomeEffect.NavigateToSpace -> {
+                                    navController.navigate(AppRoutes.space(effect.spaceName))
                                 }
 
                                 HomeEffect.NavigateToLogin -> {
@@ -198,6 +207,51 @@ fun AppNavGraph(
                     ChangePasswordScreen(
                         state = changePasswordState,
                         onEvent = changePasswordViewModel::onEvent
+                    )
+                }
+
+                composable(AppRoutes.SPACE) { backStackEntry ->
+                    val spaceName = backStackEntry.arguments
+                        ?.getString(AppRoutes.SPACE_ARGUMENT)
+                        ?: ""
+
+                    val spaceViewModel: SpaceViewModel = viewModel(
+                        factory = SpaceViewModelFactory(
+                            logoutUseCase = AppDependencies.logoutUseCase
+                        )
+                    )
+
+                    val spaceState by spaceViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        spaceViewModel.effect.collect { effect ->
+                            when (effect) {
+                                SpaceEffect.NavigateToHome -> {
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.HOME) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
+
+                                SpaceEffect.NavigateToLogin -> {
+                                    rootViewModel.onLoggedOut()
+
+                                    navController.navigate(AppRoutes.LOGIN) {
+                                        popUpTo(0) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    SpaceScreen(
+                        spaceName = spaceName,
+                        state = spaceState,
+                        onEvent = spaceViewModel::onEvent
                     )
                 }
             }

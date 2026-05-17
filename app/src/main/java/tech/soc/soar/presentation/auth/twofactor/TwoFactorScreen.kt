@@ -18,19 +18,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import tech.soc.soar.presentation.components.AppScreenScaffold
 
 @Composable
 fun TwoFactorScreen(
     state: TwoFactorUiState,
     onEvent: (TwoFactorEvent) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    AppScreenScaffold(
+        isHomeClickable = false,
+        showLogout = false
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Text(
             text = "Two-Factor Authentication",
             style = MaterialTheme.typography.headlineMedium
@@ -95,4 +100,4 @@ fun TwoFactorScreen(
             }
         }
     }
-}
+}}

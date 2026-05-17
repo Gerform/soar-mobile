@@ -4,4 +4,8 @@ sealed interface HomeEvent {
     data object HomeClicked : HomeEvent
     data object LogoutClicked : HomeEvent
     data object ChangePasswordClicked : HomeEvent
+
+    data class SpaceClicked(
+        val spaceName: String
+    ) : HomeEvent
 }
