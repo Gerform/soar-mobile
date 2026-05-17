@@ -16,6 +16,10 @@ sealed interface AppError {
         override val message: String
     ) : AppError
 
+    data class Forbidden(
+        override val message: String
+    ) : AppError
+
     data class Network(
         override val message: String = "Failed to connect to server"
     ) : AppError

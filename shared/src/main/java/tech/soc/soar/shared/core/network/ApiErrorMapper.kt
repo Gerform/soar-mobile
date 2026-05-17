@@ -27,6 +27,12 @@ object ApiErrorMapper {
                 )
             }
 
+            HttpStatusCode.Forbidden -> {
+                AppError.Forbidden(
+                    message = message ?: "Forbidden"
+                )
+            }
+
             HttpStatusCode.UnprocessableEntity -> {
                 AppError.Validation(
                     message = message ?: "Validation error"

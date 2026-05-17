@@ -1,5 +1,6 @@
 package tech.soc.soar.shared.data.alert.repository
 
+import tech.soc.soar.shared.core.error.AppError
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.data.alert.local.AlertDao
 import tech.soc.soar.shared.data.alert.mapper.toDomain
@@ -52,25 +53,37 @@ class AlertRepositoryImpl(
             }
 
             is AppResult.Error -> {
-                val cachedAlerts = alertDao.getAlertsForSpace(
-                    spaceName = spaceName,
-                    userId = userId,
-                    skip = skip,
-                    limit = pageSize
-                )
+                when (result.error) {
+                    is AppError.Unauthorized -> {
+                        return result
+                    }
 
-                if (cachedAlerts.isNotEmpty()) {
-                    AppResult.Success(
-                        AlertsPage(
-                            alerts = cachedAlerts.map { it.toDomain() },
-                            page = page,
-                            pageSize = pageSize,
-                            hasNextPage = cachedAlerts.size == pageSize,
-                            fromCache = true
+                    is AppError.Forbidden -> {
+                        return result
+                    }
+
+                    else -> {
+                        val cachedAlerts = alertDao.getAlertsForSpace(
+                            spaceName = spaceName,
+                            userId = userId,
+                            skip = skip,
+                            limit = pageSize
                         )
-                    )
-                } else {
-                    AppResult.Error(result.error)
+
+                        if (cachedAlerts.isNotEmpty()) {
+                            AppResult.Success(
+                                AlertsPage(
+                                    alerts = cachedAlerts.map { it.toDomain() },
+                                    page = page,
+                                    pageSize = pageSize,
+                                    hasNextPage = cachedAlerts.size == pageSize,
+                                    fromCache = true
+                                )
+                            )
+                        } else {
+                            AppResult.Error(result.error)
+                        }
+                    }
                 }
             }
         }

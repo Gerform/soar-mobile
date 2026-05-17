@@ -170,7 +170,9 @@ object AppDependencies {
 
         getAlertsPageUseCase = GetAlertsPageUseCase(
             alertRepository = alertRepository,
-            checkSessionUseCase = checkSessionUseCase
+            checkSessionUseCase = checkSessionUseCase,
+            refreshSessionUseCase = refreshSessionUseCase,
+            getLastUsedAccountUseCase = getLastUsedAccountUseCase
         )
 
         initialized = true

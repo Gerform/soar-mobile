@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +26,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.shared.domain.alert.model.AlertItem
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.text.style.TextAlign
 
 @Composable
 fun SpaceScreen(
@@ -53,7 +59,10 @@ fun SpaceScreen(
                 text = spaceName,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(bottom = 12.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
             )
 
             if (state.fromCache) {
@@ -142,24 +151,27 @@ private fun AlertListItem(
     alert: AlertItem,
     onClick: () -> Unit
 ) {
-    val containerColor = if (alert.isViewed) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
+    val isDarkTheme = isSystemInDarkTheme()
+
+    val containerColor = when {
+        !alert.isViewed && isDarkTheme -> MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+        alert.isViewed && isDarkTheme -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+
+        !alert.isViewed && !isDarkTheme -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
     }
 
-    Surface(
+    val shape = RoundedCornerShape(14.dp)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = containerColor,
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = if (alert.isViewed) 1.dp else 4.dp,
-        shadowElevation = if (alert.isViewed) 0.dp else 2.dp
+            .clip(shape)
+            .background(containerColor)
+            .clickable(onClick = onClick)
+            .padding(14.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp)
-        ) {
+        Column {
             Text(
                 text = alert.reason,
                 style = MaterialTheme.typography.bodyLarge,
@@ -184,9 +196,10 @@ private fun AlertListItem(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = alert.date,
+                    text = formatAlertDate(alert.date),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
                 )
             }
         }
@@ -229,5 +242,18 @@ private fun PaginationControls(
         ) {
             Text("Next")
         }
+    }
+}
+
+private fun formatAlertDate(rawDate: String): String {
+    return try {
+        val instant = Instant.parse(rawDate)
+
+        DateTimeFormatter
+            .ofPattern("dd.MM.yyyy HH:mm")
+            .withZone(ZoneId.systemDefault())
+            .format(instant)
+    } catch (exception: DateTimeParseException) {
+        rawDate
     }
 }
