@@ -1,17 +1,21 @@
 package tech.soc.soar.presentation.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,53 +27,113 @@ fun HomeScreen(
     onEvent: (HomeEvent) -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxSize()
     ) {
-        Text(
-            text = "Home",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = {
+        HomeTopBar(
+            isLoading = state.isLoading,
+            onHomeClick = {
+                onEvent(HomeEvent.HomeClicked)
+            },
+            onChangePasswordClick = {
                 onEvent(HomeEvent.ChangePasswordClicked)
             },
-            enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Change password")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedButton(
-            onClick = {
+            onLogoutClick = {
                 onEvent(HomeEvent.LogoutClicked)
-            },
-            enabled = !state.isLoading,
-            modifier = Modifier.fillMaxWidth()
+            }
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
         ) {
-            if (state.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Text("Logout")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Home",
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                if (state.error != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = state.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                if (state.isLoading) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CircularProgressIndicator()
+                }
             }
         }
+    }
+}
 
-        if (state.error != null) {
-            Spacer(modifier = Modifier.height(16.dp))
+@Composable
+private fun HomeTopBar(
+    isLoading: Boolean,
+    onHomeClick: () -> Unit,
+    onChangePasswordClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(
+            bottomStart = 16.dp,
+            bottomEnd = 16.dp
+        ),
+        tonalElevation = 3.dp,
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 40.dp,
+                    bottom = 18.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = onHomeClick,
+                enabled = !isLoading,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = "SOAR",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
 
-            Text(
-                text = state.error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Spacer(modifier = Modifier.weight(1f))
+
+            TextButton(
+                onClick = onChangePasswordClick,
+                enabled = !isLoading
+            ) {
+                Text("Change password")
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            TextButton(
+                onClick = onLogoutClick,
+                enabled = !isLoading
+            ) {
+                Text("Logout")
+            }
         }
     }
 }

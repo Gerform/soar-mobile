@@ -24,6 +24,12 @@ class HomeViewModel(
 
     fun onEvent(event: HomeEvent) {
         when (event) {
+            HomeEvent.HomeClicked -> {
+                viewModelScope.launch {
+                    _effect.send(HomeEffect.NavigateToHome)
+                }
+            }
+
             HomeEvent.LogoutClicked -> logout()
 
             HomeEvent.ChangePasswordClicked -> {

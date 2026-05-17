@@ -144,6 +144,15 @@ fun AppNavGraph(
                     LaunchedEffect(Unit) {
                         homeViewModel.effect.collect { effect ->
                             when (effect) {
+                                HomeEffect.NavigateToHome -> {
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.HOME) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
+
                                 HomeEffect.NavigateToLogin -> {
                                     rootViewModel.onLoggedOut()
 
