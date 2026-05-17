@@ -14,6 +14,7 @@ import tech.soc.soar.shared.data.database.AppDatabase
 import tech.soc.soar.shared.domain.account.repository.AccountRepository
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
+import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.auth.repository.AuthRepository
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
 import tech.soc.soar.shared.domain.auth.usecase.ChangePasswordUseCase
@@ -60,6 +61,9 @@ object AppDependencies {
         private set
 
     lateinit var getLastUsedAccountUseCase: GetLastUsedAccountUseCase
+        private set
+
+    lateinit var deleteSavedAccountUseCase: DeleteSavedAccountUseCase
         private set
 
     fun initialize(context: Context) {
@@ -133,6 +137,10 @@ object AppDependencies {
         )
 
         getLastUsedAccountUseCase = GetLastUsedAccountUseCase(
+            accountRepository = accountRepository
+        )
+
+        deleteSavedAccountUseCase = DeleteSavedAccountUseCase(
             accountRepository = accountRepository
         )
 

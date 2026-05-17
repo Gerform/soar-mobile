@@ -13,13 +13,15 @@ import tech.soc.soar.shared.core.error.AppError
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
+import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.auth.model.LoginResult
 import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 
 class LoginViewModel(
     private val loginUseCase: LoginUseCase,
     private val getSavedAccountsUseCase: GetSavedAccountsUseCase,
-    private val getLastUsedAccountUseCase: GetLastUsedAccountUseCase
+    private val getLastUsedAccountUseCase: GetLastUsedAccountUseCase,
+    private val deleteSavedAccountUseCase: DeleteSavedAccountUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -36,6 +38,10 @@ class LoginViewModel(
     fun onEvent(event: LoginEvent) {
         when (event) {
             is LoginEvent.UsernameChanged -> {
+                if (state.value.isUsernameLocked) {
+                    return
+                }
+
                 _state.update {
                     it.copy(
                         username = event.value,
@@ -73,6 +79,7 @@ class LoginViewModel(
                     it.copy(
                         username = event.account.username,
                         password = "",
+                        selectedAccountUid = event.account.uid,
                         usernameError = null,
                         passwordError = null,
                         generalError = null,
@@ -81,11 +88,30 @@ class LoginViewModel(
                 }
             }
 
+            is LoginEvent.SavedAccountLongPressed -> {
+                _state.update {
+                    it.copy(
+                        accountPendingDelete = event.account
+                    )
+                }
+            }
+
+            LoginEvent.ConfirmDeleteAccount -> {
+                deletePendingAccount()
+            }
+
+            LoginEvent.DismissDeleteAccountDialog -> {
+                _state.update {
+                    it.copy(accountPendingDelete = null)
+                }
+            }
+
             LoginEvent.AddNewUserClicked -> {
                 _state.update {
                     it.copy(
                         username = "",
                         password = "",
+                        selectedAccountUid = null,
                         usernameError = null,
                         passwordError = null,
                         generalError = null,
@@ -118,7 +144,10 @@ class LoginViewModel(
 
             if (account != null && state.value.username.isBlank()) {
                 _state.update {
-                    it.copy(username = account.username)
+                    it.copy(
+                        username = account.username,
+                        selectedAccountUid = account.uid
+                    )
                 }
             }
         }
@@ -229,6 +258,28 @@ class LoginViewModel(
                         generalError = error.message
                     )
                 }
+            }
+        }
+    }
+
+    private fun deletePendingAccount() {
+        val account = state.value.accountPendingDelete ?: return
+
+        viewModelScope.launch {
+            deleteSavedAccountUseCase(account.uid)
+
+            _state.update {
+                val isDeletedAccountSelected = it.selectedAccountUid == account.uid
+
+                it.copy(
+                    username = if (isDeletedAccountSelected) "" else it.username,
+                    password = if (isDeletedAccountSelected) "" else it.password,
+                    selectedAccountUid = if (isDeletedAccountSelected) null else it.selectedAccountUid,
+                    accountPendingDelete = null,
+                    generalError = null,
+                    usernameError = null,
+                    passwordError = null
+                )
             }
         }
     }

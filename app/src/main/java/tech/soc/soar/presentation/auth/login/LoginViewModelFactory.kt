@@ -2,6 +2,7 @@ package tech.soc.soar.presentation.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
@@ -9,7 +10,8 @@ import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 class LoginViewModelFactory(
     private val loginUseCase: LoginUseCase,
     private val getSavedAccountsUseCase: GetSavedAccountsUseCase,
-    private val getLastUsedAccountUseCase: GetLastUsedAccountUseCase
+    private val getLastUsedAccountUseCase: GetLastUsedAccountUseCase,
+    private val deleteSavedAccountUseCase: DeleteSavedAccountUseCase
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -18,7 +20,8 @@ class LoginViewModelFactory(
             return LoginViewModel(
                 loginUseCase = loginUseCase,
                 getSavedAccountsUseCase = getSavedAccountsUseCase,
-                getLastUsedAccountUseCase = getLastUsedAccountUseCase
+                getLastUsedAccountUseCase = getLastUsedAccountUseCase,
+                deleteSavedAccountUseCase = deleteSavedAccountUseCase
             ) as T
         }
 

@@ -13,4 +13,6 @@ interface AccountRepository {
     suspend fun getLastUsedAccount(): SavedAccount?
 
     suspend fun saveLoggedInUser(user: CurrentUser)
+
+    suspend fun deleteAccount(uid: Int)
 }

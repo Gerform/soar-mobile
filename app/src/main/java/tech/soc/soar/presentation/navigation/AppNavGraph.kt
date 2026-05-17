@@ -62,7 +62,8 @@ fun AppNavGraph(
                         factory = LoginViewModelFactory(
                             loginUseCase = AppDependencies.loginUseCase,
                             getSavedAccountsUseCase = AppDependencies.getSavedAccountsUseCase,
-                            getLastUsedAccountUseCase = AppDependencies.getLastUsedAccountUseCase
+                            getLastUsedAccountUseCase = AppDependencies.getLastUsedAccountUseCase,
+                            deleteSavedAccountUseCase = AppDependencies.deleteSavedAccountUseCase
                         )
                     )
 

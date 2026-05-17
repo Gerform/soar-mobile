@@ -7,6 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -19,7 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import tech.soc.soar.shared.domain.account.model.SavedAccount
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LoginScreen(
     state: LoginUiState,
@@ -56,7 +66,8 @@ fun LoginScreen(
                 Text("Username")
             },
             isError = state.usernameError != null,
-            singleLine = true
+            singleLine = true,
+            enabled = !state.isUsernameLocked
         )
 
         if (state.usernameError != null) {
@@ -141,24 +152,54 @@ fun LoginScreen(
             text = {
                 Column {
                     state.savedAccounts.forEach { account ->
-                        TextButton(
-                            onClick = {
-                                onEvent(LoginEvent.SavedAccountSelected(account))
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                        val isSelected = state.selectedAccountUid == account.uid
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isSelected) {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    }
+                                )
+                                .combinedClickable(
+                                    onClick = {
+                                        onEvent(LoginEvent.SavedAccountSelected(account))
+                                    },
+                                    onLongClick = {
+                                        onEvent(LoginEvent.SavedAccountLongPressed(account))
+                                    }
+                                )
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalAlignment = Alignment.Start
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text(account.username)
+                                Text(
+                                    text = account.username,
+                                    fontWeight = FontWeight.Medium
+                                )
 
                                 Text(
                                     text = account.mail,
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = account.mainRole(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     TextButton(
@@ -183,4 +224,53 @@ fun LoginScreen(
             }
         )
     }
+
+    val accountPendingDelete = state.accountPendingDelete
+
+    if (accountPendingDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                onEvent(LoginEvent.DismissDeleteAccountDialog)
+            },
+            title = {
+                Text("Delete account")
+            },
+            text = {
+                Text(
+                    text = "Remove ${accountPendingDelete.username} from this device?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEvent(LoginEvent.ConfirmDeleteAccount)
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        onEvent(LoginEvent.DismissDeleteAccountDialog)
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+private val REQUIRED_USER_ROLES = setOf(
+    "admin",
+    "responder",
+    "guest",
+    "responsible"
+)
+
+private fun SavedAccount.mainRole(): String {
+    return roles.firstOrNull { it in REQUIRED_USER_ROLES }
+        ?: roles.firstOrNull()
+        ?: "unknown"
 }

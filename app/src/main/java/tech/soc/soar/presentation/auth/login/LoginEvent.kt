@@ -20,6 +20,14 @@ sealed interface LoginEvent {
         val account: SavedAccount
     ) : LoginEvent
 
+    data class SavedAccountLongPressed(
+        val account: SavedAccount
+    ) : LoginEvent
+
+    data object ConfirmDeleteAccount : LoginEvent
+
+    data object DismissDeleteAccountDialog : LoginEvent
+
     data object AddNewUserClicked : LoginEvent
 
     data object DismissAccountPicker : LoginEvent

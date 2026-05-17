@@ -10,5 +10,10 @@ data class LoginUiState(
     val passwordError: String? = null,
     val generalError: String? = null,
     val savedAccounts: List<SavedAccount> = emptyList(),
-    val isAccountPickerVisible: Boolean = false
-)
+    val isAccountPickerVisible: Boolean = false,
+    val selectedAccountUid: Int? = null,
+    val accountPendingDelete: SavedAccount? = null
+) {
+    val isUsernameLocked: Boolean
+        get() = selectedAccountUid != null
+}

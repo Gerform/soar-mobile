@@ -39,4 +39,8 @@ class AccountRepositoryImpl(
             )
         )
     }
+
+    override suspend fun deleteAccount(uid: Int) {
+        userAccountDao.deleteAccount(uid)
+    }
 }
