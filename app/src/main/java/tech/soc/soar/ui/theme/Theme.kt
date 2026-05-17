@@ -8,41 +8,80 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val LightColorScheme = lightColorScheme(
+    primary = BluePrimary,
+    onPrimary = Color.White,
+
+    primaryContainer = BlueTopBarLight,
+    onPrimaryContainer = Color.White,
+
+    secondary = BluePrimaryDark,
+    onSecondary = Color.White,
+
+    tertiary = BluePrimaryLight,
+    onTertiary = Color.Black,
+
+    background = LightBackground,
+    onBackground = LightOnBackground,
+
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurface,
+
+    outline = LightOutline,
+
+    error = ErrorRed,
+    onError = Color.White
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+private val DarkColorScheme = darkColorScheme(
+    primary = BluePrimaryDarkTheme,
+    onPrimary = Color.Black,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
+    primaryContainer = BlueTopBarDark,
+    onPrimaryContainer = Color.White,
+
+    secondary = BluePrimary,
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+
+    tertiary = BluePrimaryLight,
+    onTertiary = Color.Black,
+
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurface,
+
+    outline = DarkOutline,
+
+    error = ErrorRed,
+    onError = Color.White
 )
 
 @Composable
 fun SoarTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+
+            if (darkTheme) {
+                dynamicDarkColorScheme(context)
+            } else {
+                dynamicLightColorScheme(context)
+            }
         }
 
         darkTheme -> DarkColorScheme
