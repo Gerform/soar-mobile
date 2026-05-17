@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.presentation.components.SoarStyledTitle
 import tech.soc.soar.shared.domain.auth.model.UserRoles
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -53,19 +54,16 @@ fun LoginScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-        Text(
-            text = "SOAR",
-            style = MaterialTheme.typography.headlineLarge
-        )
+        SoarStyledTitle()
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "Sign in to continue",
             style = MaterialTheme.typography.bodyLarge
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
             value = state.username,
