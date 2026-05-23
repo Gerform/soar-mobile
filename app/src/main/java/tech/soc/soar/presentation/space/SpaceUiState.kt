@@ -4,6 +4,7 @@ import tech.soc.soar.shared.domain.alert.model.AlertItem
 
 data class SpaceUiState(
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val alerts: List<AlertItem> = emptyList(),
     val page: Int = 0,
     val hasNextPage: Boolean = false,

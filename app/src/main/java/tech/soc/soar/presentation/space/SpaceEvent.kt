@@ -5,6 +5,7 @@ sealed interface SpaceEvent {
     data object LogoutClicked : SpaceEvent
     data object NextPageClicked : SpaceEvent
     data object PreviousPageClicked : SpaceEvent
+    data object RefreshTriggered : SpaceEvent
 
     data class AlertClicked(
         val alertId: Long

@@ -26,7 +26,10 @@ class SpaceViewModel(
     val effect = _effect.receiveAsFlow()
 
     init {
-        loadAlerts(page = 0)
+        loadAlerts(
+            page = 0,
+            isRefresh = false
+        )
     }
 
     fun onEvent(event: SpaceEvent) {
@@ -41,15 +44,30 @@ class SpaceViewModel(
                 logout()
             }
 
+            SpaceEvent.RefreshTriggered -> {
+                if (!state.value.isLoading && !state.value.isRefreshing) {
+                    loadAlerts(
+                        page = state.value.page,
+                        isRefresh = true
+                    )
+                }
+            }
+
             SpaceEvent.NextPageClicked -> {
-                if (state.value.hasNextPage && !state.value.isLoading) {
-                    loadAlerts(page = state.value.page + 1)
+                if (state.value.hasNextPage && !state.value.isLoading && !state.value.isRefreshing) {
+                    loadAlerts(
+                        page = state.value.page + 1,
+                        isRefresh = false
+                    )
                 }
             }
 
             SpaceEvent.PreviousPageClicked -> {
-                if (state.value.page > 0 && !state.value.isLoading) {
-                    loadAlerts(page = state.value.page - 1)
+                if (state.value.page > 0 && !state.value.isLoading && !state.value.isRefreshing) {
+                    loadAlerts(
+                        page = state.value.page - 1,
+                        isRefresh = false
+                    )
                 }
             }
 
@@ -65,11 +83,15 @@ class SpaceViewModel(
         }
     }
 
-    private fun loadAlerts(page: Int) {
+    private fun loadAlerts(
+        page: Int,
+        isRefresh: Boolean
+    ) {
         viewModelScope.launch {
             _state.update {
                 it.copy(
-                    isLoading = true,
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
                     error = null
                 )
             }
@@ -85,6 +107,7 @@ class SpaceViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             alerts = result.data.alerts,
                             page = result.data.page,
                             hasNextPage = result.data.hasNextPage,
@@ -98,6 +121,7 @@ class SpaceViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             error = result.error.message
                         )
                     }

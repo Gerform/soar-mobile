@@ -18,6 +18,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,8 +33,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.style.TextAlign
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpaceScreen(
     spaceName: String,
@@ -74,7 +78,7 @@ fun SpaceScreen(
                 )
             }
 
-            if (state.error != null) {
+            if (state.error != null && state.alerts.isNotEmpty()) {
                 Text(
                     text = state.error,
                     color = MaterialTheme.colorScheme.error,
@@ -83,64 +87,92 @@ fun SpaceScreen(
                 )
             }
 
-            when {
-                state.isLoading && state.alerts.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                state.alerts.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No alerts",
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                }
-
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(
-                            items = state.alerts,
-                            key = { alert -> alert.id }
-                        ) { alert ->
-                            AlertListItem(
-                                alert = alert,
-                                onClick = {
-                                    onEvent(
-                                        SpaceEvent.AlertClicked(alert.id)
-                                    )
-                                }
-                            )
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = {
+                    onEvent(SpaceEvent.RefreshTriggered)
+                },
+                modifier = Modifier.weight(1f)
+            ) {
+                when {
+                    state.isLoading && state.alerts.isEmpty() -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 120.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            item {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
 
-                    if (state.showPagination) {
-                        PaginationControls(
-                            page = state.page,
-                            hasNextPage = state.hasNextPage,
-                            isLoading = state.isLoading,
-                            onPreviousClick = {
-                                onEvent(SpaceEvent.PreviousPageClicked)
-                            },
-                            onNextClick = {
-                                onEvent(SpaceEvent.NextPageClicked)
+                    state.error != null && state.alerts.isEmpty() -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 120.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            item {
+                                Text(
+                                    text = state.error,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
-                        )
+                        }
+                    }
+
+                    state.alerts.isEmpty() -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 120.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            item {
+                                Text(
+                                    text = "No alerts",
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(
+                                items = state.alerts,
+                                key = { alert -> alert.id }
+                            ) { alert ->
+                                AlertListItem(
+                                    alert = alert,
+                                    onClick = {
+                                        onEvent(
+                                            SpaceEvent.AlertClicked(alert.id)
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
+            }
+
+            if (state.showPagination) {
+                PaginationControls(
+                    page = state.page,
+                    hasNextPage = state.hasNextPage,
+                    isLoading = state.isLoading || state.isRefreshing,
+                    onPreviousClick = {
+                        onEvent(SpaceEvent.PreviousPageClicked)
+                    },
+                    onNextClick = {
+                        onEvent(SpaceEvent.NextPageClicked)
+                    }
+                )
             }
         }
     }
