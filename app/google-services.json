@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "574603383894",
+    "project_id": "gerform-c6767",
+    "storage_bucket": "gerform-c6767.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574603383894:android:d4996da997aa6e19e2d7f7",
+        "android_client_info": {
+          "package_name": "tech.soc.soar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMg1k73YazwBanNGiZFbZdIwnF-ZiVEXs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
