@@ -35,6 +35,7 @@ import java.time.format.DateTimeParseException
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.text.style.TextAlign
+import tech.soc.soar.shared.domain.alert.model.AlertStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,12 +186,24 @@ private fun AlertListItem(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
 
-    val containerColor = when {
-        !alert.isViewed && isDarkTheme -> MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
-        alert.isViewed && isDarkTheme -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    val shouldHighlightAsNew = alert.shouldBeHighlightedAsNew()
 
-        !alert.isViewed && !isDarkTheme -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+    val containerColor = when {
+        shouldHighlightAsNew && isDarkTheme -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+        }
+
+        !shouldHighlightAsNew && isDarkTheme -> {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        }
+
+        shouldHighlightAsNew && !isDarkTheme -> {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        }
+
+        else -> {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        }
     }
 
     val shape = RoundedCornerShape(14.dp)
@@ -288,4 +301,12 @@ private fun formatAlertDate(rawDate: String): String {
     } catch (exception: DateTimeParseException) {
         rawDate
     }
+}
+
+private fun AlertItem.isInactiveStatus(): Boolean {
+    return AlertStatus.isInactive(status)
+}
+
+private fun AlertItem.shouldBeHighlightedAsNew(): Boolean {
+    return !isViewed && !isInactiveStatus()
 }
