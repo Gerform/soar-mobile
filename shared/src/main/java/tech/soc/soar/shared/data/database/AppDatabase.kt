@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import tech.soc.soar.shared.data.account.local.UserAccountDao
 import tech.soc.soar.shared.data.account.local.UserAccountEntity
 import tech.soc.soar.shared.data.alert.local.AlertDao
+import tech.soc.soar.shared.data.alert.local.AlertDetailsEntity
 import tech.soc.soar.shared.data.alert.local.AlertEntity
 import tech.soc.soar.shared.data.alert.local.AlertViewEntity
 
@@ -12,9 +13,10 @@ import tech.soc.soar.shared.data.alert.local.AlertViewEntity
     entities = [
         UserAccountEntity::class,
         AlertEntity::class,
-        AlertViewEntity::class
+        AlertViewEntity::class,
+        AlertDetailsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

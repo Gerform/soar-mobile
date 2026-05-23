@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
+import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 
 class SpaceViewModel(
     private val spaceName: String,
     private val getAlertsPageUseCase: GetAlertsPageUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val markAlertViewedUseCase: MarkAlertViewedUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SpaceUiState())
@@ -73,6 +75,20 @@ class SpaceViewModel(
 
             is SpaceEvent.AlertClicked -> {
                 viewModelScope.launch {
+                    markAlertViewedUseCase(event.alertId)
+
+                    _state.update { currentState ->
+                        currentState.copy(
+                            alerts = currentState.alerts.map { alert ->
+                                if (alert.id == event.alertId) {
+                                    alert.copy(isViewed = true)
+                                } else {
+                                    alert
+                                }
+                            }
+                        )
+                    }
+
                     _effect.send(
                         SpaceEffect.NavigateToAlertDetails(
                             alertId = event.alertId

@@ -1,6 +1,7 @@
 package tech.soc.soar.shared.domain.alert.repository
 
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.alert.model.AlertDetails
 import tech.soc.soar.shared.domain.alert.model.AlertsPage
 
 interface AlertRepository {
@@ -11,4 +12,15 @@ interface AlertRepository {
         page: Int,
         pageSize: Int
     ): AppResult<AlertsPage>
+
+    suspend fun getAlertDetails(
+        alertId: Long,
+        spaceName: String,
+        userId: Int
+    ): AppResult<AlertDetails>
+
+    suspend fun markAlertViewed(
+        alertId: Long,
+        userId: Int
+    )
 }

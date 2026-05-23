@@ -14,7 +14,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import tech.soc.soar.di.AppDependencies
+import tech.soc.soar.presentation.alertdetails.AlertDetailsEffect
 import tech.soc.soar.presentation.alertdetails.AlertDetailsScreen
+import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModel
+import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModelFactory
 import tech.soc.soar.presentation.auth.login.LoginEffect
 import tech.soc.soar.presentation.auth.login.LoginScreen
 import tech.soc.soar.presentation.auth.login.LoginViewModel
@@ -220,7 +223,8 @@ fun AppNavGraph(
                         factory = SpaceViewModelFactory(
                             spaceName = spaceName,
                             getAlertsPageUseCase = AppDependencies.getAlertsPageUseCase,
-                            logoutUseCase = AppDependencies.logoutUseCase
+                            logoutUseCase = AppDependencies.logoutUseCase,
+                            markAlertViewedUseCase = AppDependencies.markAlertViewedUseCase
                         )
                     )
 
@@ -266,21 +270,48 @@ fun AppNavGraph(
                     )
                 }
                 composable(AppRoutes.ALERT_DETAILS) { backStackEntry ->
+                    val spaceName = backStackEntry.arguments
+                        ?.getString(AppRoutes.SPACE_ARGUMENT)
+                        .orEmpty()
+
                     val alertId = backStackEntry.arguments
                         ?.getString(AppRoutes.ALERT_ID_ARGUMENT)
                         ?.toLongOrNull()
                         ?: 0L
 
-                    AlertDetailsScreen(
-                        alertId = alertId,
-                        onHomeClick = {
-                            navController.navigate(AppRoutes.HOME) {
-                                popUpTo(AppRoutes.HOME) {
-                                    inclusive = false
+                    val alertDetailsViewModel: AlertDetailsViewModel = viewModel(
+                        factory = AlertDetailsViewModelFactory(
+                            alertId = alertId,
+                            spaceName = spaceName,
+                            getAlertDetailsUseCase = AppDependencies.getAlertDetailsUseCase,
+                            markAlertViewedUseCase = AppDependencies.markAlertViewedUseCase
+                        )
+                    )
+
+                    val alertDetailsState by alertDetailsViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        alertDetailsViewModel.effect.collect { effect ->
+                            when (effect) {
+                                AlertDetailsEffect.NavigateBack -> {
+                                    navController.popBackStack()
                                 }
-                                launchSingleTop = true
+
+                                AlertDetailsEffect.NavigateToHome -> {
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.HOME) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    AlertDetailsScreen(
+                        state = alertDetailsState,
+                        onEvent = alertDetailsViewModel::onEvent
                     )
                 }
             }

@@ -3,10 +3,12 @@ package tech.soc.soar.shared.data.alert.repository
 import tech.soc.soar.shared.core.error.AppError
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.data.alert.local.AlertDao
+import tech.soc.soar.shared.data.alert.local.AlertViewEntity
 import tech.soc.soar.shared.data.alert.mapper.toDomain
 import tech.soc.soar.shared.data.alert.mapper.toEntity
 import tech.soc.soar.shared.data.alert.mapper.toViewEntity
 import tech.soc.soar.shared.data.alert.remote.AlertApi
+import tech.soc.soar.shared.domain.alert.model.AlertDetails
 import tech.soc.soar.shared.domain.alert.model.AlertsPage
 import tech.soc.soar.shared.domain.alert.repository.AlertRepository
 
@@ -87,5 +89,78 @@ class AlertRepositoryImpl(
                 }
             }
         }
+    }
+
+    override suspend fun getAlertDetails(
+        alertId: Long,
+        spaceName: String,
+        userId: Int
+    ): AppResult<AlertDetails> {
+        return when (
+            val result = alertApi.getAlertById(
+                alertId = alertId,
+                spaceName = spaceName
+            )
+        ) {
+            is AppResult.Success -> {
+                val detail = result.data
+
+                alertDao.upsertAlertDetail(
+                    detail.toEntity()
+                )
+
+                markAlertViewed(
+                    alertId = alertId,
+                    userId = userId
+                )
+
+                AppResult.Success(
+                    detail.toDomain(fromCache = false)
+                )
+            }
+
+            is AppResult.Error -> {
+                when (result.error) {
+                    is AppError.Unauthorized,
+                    is AppError.Forbidden -> {
+                        result
+                    }
+
+                    else -> {
+                        val cachedDetail = alertDao.getAlertDetail(
+                            alertId = alertId,
+                            spaceName = spaceName
+                        )
+
+                        if (cachedDetail != null) {
+                            markAlertViewed(
+                                alertId = alertId,
+                                userId = userId
+                            )
+
+                            AppResult.Success(
+                                cachedDetail.toDomain()
+                            )
+                        } else {
+                            AppResult.Error(result.error)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override suspend fun markAlertViewed(
+        alertId: Long,
+        userId: Int
+    ) {
+        alertDao.upsertAlertView(
+            AlertViewEntity(
+                alertId = alertId,
+                userId = userId,
+                isViewed = true,
+                updatedAt = System.currentTimeMillis()
+            )
+        )
     }
 }

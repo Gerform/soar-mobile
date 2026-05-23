@@ -38,4 +38,24 @@ interface AlertDao {
         skip: Int,
         limit: Int
     ): List<AlertWithViewEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAlertDetail(detail: AlertDetailsEntity)
+
+    @Query(
+        """
+    SELECT *
+    FROM alert_details
+    WHERE id = :alertId
+      AND space_name = :spaceName
+    LIMIT 1
+    """
+    )
+    suspend fun getAlertDetail(
+        alertId: Long,
+        spaceName: String
+    ): AlertDetailsEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAlertView(view: AlertViewEntity)
 }

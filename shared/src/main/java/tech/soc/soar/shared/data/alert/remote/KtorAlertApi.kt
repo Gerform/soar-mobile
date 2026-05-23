@@ -13,6 +13,7 @@ import tech.soc.soar.shared.core.network.ApiConfig
 import tech.soc.soar.shared.core.network.ApiErrorMapper
 import tech.soc.soar.shared.core.network.TokenProvider
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.data.alert.dto.AlertDetailsDto
 import tech.soc.soar.shared.data.alert.dto.AlertDto
 
 class KtorAlertApi(
@@ -65,5 +66,40 @@ class KtorAlertApi(
 
     private companion object {
         val SUCCESS_STATUS_RANGE = 200..299
+    }
+
+    override suspend fun getAlertById(
+        alertId: Long,
+        spaceName: String
+    ): AppResult<AlertDetailsDto> {
+        return try {
+            val response = client.get(buildUrl("/alerts/$alertId")) {
+                val accessToken = tokenProvider.getAccessToken()
+
+                if (!accessToken.isNullOrBlank()) {
+                    bearerAuth(accessToken)
+                }
+
+                parameter("space_name", spaceName)
+            }
+
+            if (response.status.value in SUCCESS_STATUS_RANGE) {
+                AppResult.Success(response.body())
+            } else {
+                AppResult.Error(ApiErrorMapper.map(response))
+            }
+        } catch (exception: ClientRequestException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: ServerResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: RedirectResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: Exception) {
+            AppResult.Error(
+                AppError.Network(
+                    message = "Failed to connect to server"
+                )
+            )
+        }
     }
 }

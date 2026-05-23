@@ -1,25 +1,24 @@
-package tech.soc.soar.presentation.space
+package tech.soc.soar.presentation.alertdetails
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
+import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
-import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 
-class SpaceViewModelFactory(
+class AlertDetailsViewModelFactory(
+    private val alertId: Long,
     private val spaceName: String,
-    private val getAlertsPageUseCase: GetAlertsPageUseCase,
-    private val logoutUseCase: LogoutUseCase,
+    private val getAlertDetailsUseCase: GetAlertDetailsUseCase,
     private val markAlertViewedUseCase: MarkAlertViewedUseCase
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(SpaceViewModel::class.java)) {
-            return SpaceViewModel(
+        if (modelClass.isAssignableFrom(AlertDetailsViewModel::class.java)) {
+            return AlertDetailsViewModel(
+                alertId = alertId,
                 spaceName = spaceName,
-                getAlertsPageUseCase = getAlertsPageUseCase,
-                logoutUseCase = logoutUseCase,
+                getAlertDetailsUseCase = getAlertDetailsUseCase,
                 markAlertViewedUseCase = markAlertViewedUseCase
             ) as T
         }

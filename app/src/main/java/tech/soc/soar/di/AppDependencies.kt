@@ -18,7 +18,9 @@ import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetSavedAccountsUseCase
 import tech.soc.soar.shared.domain.alert.repository.AlertRepository
+import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
+import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.auth.repository.AuthRepository
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
 import tech.soc.soar.shared.domain.auth.usecase.ChangePasswordUseCase
@@ -95,6 +97,23 @@ object AppDependencies {
             alertRepository = alertRepository,
             checkSessionUseCase = checkSessionUseCase,
             refreshSessionUseCase = refreshSessionUseCase,
+            getLastUsedAccountUseCase = getLastUsedAccountUseCase
+        )
+    }
+
+    val getAlertDetailsUseCase: GetAlertDetailsUseCase by lazy {
+        GetAlertDetailsUseCase(
+            alertRepository = alertRepository,
+            checkSessionUseCase = checkSessionUseCase,
+            refreshSessionUseCase = refreshSessionUseCase,
+            getLastUsedAccountUseCase = getLastUsedAccountUseCase
+        )
+    }
+
+    val markAlertViewedUseCase: MarkAlertViewedUseCase by lazy {
+        MarkAlertViewedUseCase(
+            alertRepository = alertRepository,
+            checkSessionUseCase = checkSessionUseCase,
             getLastUsedAccountUseCase = getLastUsedAccountUseCase
         )
     }
