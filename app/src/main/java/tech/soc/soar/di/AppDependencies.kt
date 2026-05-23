@@ -35,16 +35,13 @@ object AppDependencies {
 
     private var initialized: Boolean = false
 
+    private lateinit var appContext: Context
+    private lateinit var tokenProvider: AuthTokenProvider
+
     lateinit var authApi: AuthApi
         private set
 
-    lateinit var alertApi: AlertApi
-        private set
-
     lateinit var authRepository: AuthRepository
-        private set
-
-    lateinit var alertRepository: AlertRepository
         private set
 
     lateinit var sessionRepository: SessionRepository
@@ -77,13 +74,35 @@ object AppDependencies {
     lateinit var deleteSavedAccountUseCase: DeleteSavedAccountUseCase
         private set
 
-    lateinit var getAlertsPageUseCase: GetAlertsPageUseCase
-        private set
+    val alertApi: AlertApi by lazy {
+        AlertApiFactory.create(
+            apiConfig = ApiConfig(
+                baseUrl = ALERT_BASE_URL
+            ),
+            tokenProvider = tokenProvider
+        )
+    }
+
+    val alertRepository: AlertRepository by lazy {
+        AlertRepositoryFactory.create(
+            context = appContext,
+            alertApi = alertApi
+        )
+    }
+
+    val getAlertsPageUseCase: GetAlertsPageUseCase by lazy {
+        GetAlertsPageUseCase(
+            alertRepository = alertRepository,
+            checkSessionUseCase = checkSessionUseCase,
+            refreshSessionUseCase = refreshSessionUseCase,
+            getLastUsedAccountUseCase = getLastUsedAccountUseCase
+        )
+    }
 
     fun initialize(context: Context) {
         if (initialized) return
 
-        val appContext = context.applicationContext
+        appContext = context.applicationContext
 
         val tokenStorage = EncryptedTokenStorage(
             context = appContext
@@ -91,7 +110,7 @@ object AppDependencies {
 
         val userSessionCache = UserSessionCache()
 
-        val tokenProvider = AuthTokenProvider(
+        tokenProvider = AuthTokenProvider(
             tokenStorage = tokenStorage
         )
 
@@ -102,20 +121,8 @@ object AppDependencies {
             tokenProvider = tokenProvider
         )
 
-        alertApi = AlertApiFactory.create(
-            apiConfig = ApiConfig(
-                baseUrl = ALERT_BASE_URL
-            ),
-            tokenProvider = tokenProvider
-        )
-
         val accountRepository: AccountRepository = AccountRepositoryFactory.create(
             context = appContext
-        )
-
-        alertRepository = AlertRepositoryFactory.create(
-            context = appContext,
-            alertApi = alertApi
         )
 
         authRepository = AuthRepositoryImpl(
@@ -166,13 +173,6 @@ object AppDependencies {
 
         deleteSavedAccountUseCase = DeleteSavedAccountUseCase(
             accountRepository = accountRepository
-        )
-
-        getAlertsPageUseCase = GetAlertsPageUseCase(
-            alertRepository = alertRepository,
-            checkSessionUseCase = checkSessionUseCase,
-            refreshSessionUseCase = refreshSessionUseCase,
-            getLastUsedAccountUseCase = getLastUsedAccountUseCase
         )
 
         initialized = true

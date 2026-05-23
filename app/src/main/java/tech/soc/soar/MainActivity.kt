@@ -19,10 +19,13 @@ import tech.soc.soar.presentation.navigation.AppNavGraph
 import tech.soc.soar.presentation.root.RootViewModel
 import tech.soc.soar.presentation.root.RootViewModelFactory
 import tech.soc.soar.ui.theme.SoarTheme
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
