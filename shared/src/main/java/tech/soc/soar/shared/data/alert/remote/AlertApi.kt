@@ -16,4 +16,9 @@ interface AlertApi {
         alertId: Long,
         spaceName: String
     ): AppResult<AlertDetailsDto>
+
+    suspend fun updateAlertStatus(
+        alertId: Long,
+        status: String
+    ): AppResult<String>
 }

@@ -58,4 +58,30 @@ interface AlertDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAlertView(view: AlertViewEntity)
+
+    @Query(
+        """
+    UPDATE alerts
+    SET status = :status
+    WHERE id = :alertId
+    """
+    )
+    suspend fun updateAlertStatus(
+        alertId: Long,
+        status: String
+    )
+
+    @Query(
+        """
+    UPDATE alert_details
+    SET status = :status,
+        updated_at = :updatedAt
+    WHERE id = :alertId
+    """
+    )
+    suspend fun updateAlertDetailsStatus(
+        alertId: Long,
+        status: String,
+        updatedAt: Long
+    )
 }

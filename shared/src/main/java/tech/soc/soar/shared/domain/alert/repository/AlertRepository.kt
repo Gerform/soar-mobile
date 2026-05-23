@@ -23,4 +23,9 @@ interface AlertRepository {
         alertId: Long,
         userId: Int
     )
+
+    suspend fun updateAlertStatus(
+        alertId: Long,
+        status: String
+    ): AppResult<String>
 }

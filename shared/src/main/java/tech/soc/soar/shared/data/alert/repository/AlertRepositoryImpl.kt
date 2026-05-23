@@ -163,4 +163,35 @@ class AlertRepositoryImpl(
             )
         )
     }
+
+    override suspend fun updateAlertStatus(
+        alertId: Long,
+        status: String
+    ): AppResult<String> {
+        return when (
+            val result = alertApi.updateAlertStatus(
+                alertId = alertId,
+                status = status
+            )
+        ) {
+            is AppResult.Success -> {
+                alertDao.updateAlertStatus(
+                    alertId = alertId,
+                    status = status
+                )
+
+                alertDao.updateAlertDetailsStatus(
+                    alertId = alertId,
+                    status = status,
+                    updatedAt = System.currentTimeMillis()
+                )
+
+                AppResult.Success(status)
+            }
+
+            is AppResult.Error -> {
+                result
+            }
+        }
+    }
 }

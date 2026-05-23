@@ -18,28 +18,31 @@ import tech.soc.soar.presentation.alertdetails.AlertDetailsEffect
 import tech.soc.soar.presentation.alertdetails.AlertDetailsScreen
 import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModel
 import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModelFactory
-import tech.soc.soar.presentation.auth.login.LoginEffect
-import tech.soc.soar.presentation.auth.login.LoginScreen
-import tech.soc.soar.presentation.auth.login.LoginViewModel
-import tech.soc.soar.presentation.auth.login.LoginViewModelFactory
-import tech.soc.soar.presentation.auth.twofactor.TwoFactorScreen
-import tech.soc.soar.presentation.auth.twofactor.TwoFactorEffect
-import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModel
-import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModelFactory
 import tech.soc.soar.presentation.auth.changepassword.ChangePasswordEffect
 import tech.soc.soar.presentation.auth.changepassword.ChangePasswordScreen
 import tech.soc.soar.presentation.auth.changepassword.ChangePasswordViewModel
 import tech.soc.soar.presentation.auth.changepassword.ChangePasswordViewModelFactory
+import tech.soc.soar.presentation.auth.login.LoginEffect
+import tech.soc.soar.presentation.auth.login.LoginScreen
+import tech.soc.soar.presentation.auth.login.LoginViewModel
+import tech.soc.soar.presentation.auth.login.LoginViewModelFactory
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorEffect
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorScreen
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModel
+import tech.soc.soar.presentation.auth.twofactor.TwoFactorViewModelFactory
 import tech.soc.soar.presentation.home.HomeEffect
 import tech.soc.soar.presentation.home.HomeScreen
 import tech.soc.soar.presentation.home.HomeViewModel
 import tech.soc.soar.presentation.home.HomeViewModelFactory
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
-import tech.soc.soar.presentation.space.SpaceScreen
 import tech.soc.soar.presentation.space.SpaceEffect
+import tech.soc.soar.presentation.space.SpaceEvent
+import tech.soc.soar.presentation.space.SpaceScreen
 import tech.soc.soar.presentation.space.SpaceViewModel
 import tech.soc.soar.presentation.space.SpaceViewModelFactory
+
+private const val UPDATED_ALERT_STATUS_KEY = "updated_alert_status"
 
 @Composable
 fun AppNavGraph(
@@ -230,6 +233,34 @@ fun AppNavGraph(
 
                     val spaceState by spaceViewModel.state.collectAsState()
 
+                    val updatedAlertStatus by backStackEntry.savedStateHandle
+                        .getStateFlow(UPDATED_ALERT_STATUS_KEY, "")
+                        .collectAsState()
+
+                    LaunchedEffect(updatedAlertStatus) {
+                        if (updatedAlertStatus.isBlank()) {
+                            return@LaunchedEffect
+                        }
+
+                        val parts = updatedAlertStatus.split("|")
+
+                        if (parts.size == 2) {
+                            val alertId = parts[0].toLongOrNull()
+                            val status = parts[1]
+
+                            if (alertId != null) {
+                                spaceViewModel.onEvent(
+                                    SpaceEvent.AlertStatusChanged(
+                                        alertId = alertId,
+                                        status = status
+                                    )
+                                )
+                            }
+                        }
+
+                        backStackEntry.savedStateHandle[UPDATED_ALERT_STATUS_KEY] = ""
+                    }
+
                     LaunchedEffect(Unit) {
                         spaceViewModel.effect.collect { effect ->
                             when (effect) {
@@ -251,6 +282,7 @@ fun AppNavGraph(
                                         }
                                     }
                                 }
+
                                 is SpaceEffect.NavigateToAlertDetails -> {
                                     navController.navigate(
                                         AppRoutes.alertDetails(
@@ -269,6 +301,7 @@ fun AppNavGraph(
                         onEvent = spaceViewModel::onEvent
                     )
                 }
+
                 composable(AppRoutes.ALERT_DETAILS) { backStackEntry ->
                     val spaceName = backStackEntry.arguments
                         ?.getString(AppRoutes.SPACE_ARGUMENT)
@@ -284,7 +317,8 @@ fun AppNavGraph(
                             alertId = alertId,
                             spaceName = spaceName,
                             getAlertDetailsUseCase = AppDependencies.getAlertDetailsUseCase,
-                            markAlertViewedUseCase = AppDependencies.markAlertViewedUseCase
+                            markAlertViewedUseCase = AppDependencies.markAlertViewedUseCase,
+                            updateAlertStatusUseCase = AppDependencies.updateAlertStatusUseCase
                         )
                     )
 
@@ -304,6 +338,15 @@ fun AppNavGraph(
                                         }
                                         launchSingleTop = true
                                     }
+                                }
+
+                                is AlertDetailsEffect.AlertStatusUpdated -> {
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set(
+                                            UPDATED_ALERT_STATUS_KEY,
+                                            "${effect.alertId}|${effect.status}"
+                                        )
                                 }
                             }
                         }

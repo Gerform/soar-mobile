@@ -10,4 +10,9 @@ sealed interface SpaceEvent {
     data class AlertClicked(
         val alertId: Long
     ) : SpaceEvent
+
+    data class AlertStatusChanged(
+        val alertId: Long,
+        val status: String
+    ) : SpaceEvent
 }

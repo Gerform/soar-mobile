@@ -9,6 +9,10 @@ import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.patch
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import kotlinx.serialization.SerializationException
 import tech.soc.soar.shared.core.error.AppError
 import tech.soc.soar.shared.core.network.ApiConfig
@@ -17,7 +21,9 @@ import tech.soc.soar.shared.core.network.TokenProvider
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.data.alert.dto.AlertDetailsDto
 import tech.soc.soar.shared.data.alert.dto.AlertDto
+import tech.soc.soar.shared.data.alert.dto.UpdateAlertStatusRequestDto
 import java.io.IOException
+
 
 class KtorAlertApi(
     private val client: HttpClient,
@@ -121,6 +127,63 @@ class KtorAlertApi(
             )
         } catch (exception: Exception) {
             Log.e("KtorAlertApi", "Unexpected alert details error", exception)
+
+            AppResult.Error(
+                AppError.Api(
+                    message = exception.message ?: "Unexpected error"
+                )
+            )
+        }
+    }
+
+    override suspend fun updateAlertStatus(
+        alertId: Long,
+        status: String
+    ): AppResult<String> {
+        return try {
+            val response = client.patch(buildUrl("/alerts/$alertId/status")) {
+                val accessToken = tokenProvider.getAccessToken()
+
+                if (!accessToken.isNullOrBlank()) {
+                    bearerAuth(accessToken)
+                }
+
+                contentType(ContentType.Application.Json)
+
+                setBody(
+                    UpdateAlertStatusRequestDto(
+                        status = status
+                    )
+                )
+            }
+
+            if (response.status.value in SUCCESS_STATUS_RANGE) {
+                AppResult.Success(status)
+            } else {
+                AppResult.Error(ApiErrorMapper.map(response))
+            }
+        } catch (exception: ClientRequestException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: ServerResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: RedirectResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: IOException) {
+            AppResult.Error(
+                AppError.Network(
+                    message = "Failed to connect to server"
+                )
+            )
+        } catch (exception: SerializationException) {
+            Log.e("KtorAlertApi", "Failed to parse update alert status response", exception)
+
+            AppResult.Error(
+                AppError.Api(
+                    message = "Failed to parse server response"
+                )
+            )
+        } catch (exception: Exception) {
+            Log.e("KtorAlertApi", "Unexpected update alert status error", exception)
 
             AppResult.Error(
                 AppError.Api(

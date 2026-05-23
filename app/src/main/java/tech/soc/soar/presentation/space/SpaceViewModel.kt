@@ -96,6 +96,22 @@ class SpaceViewModel(
                     )
                 }
             }
+
+            is SpaceEvent.AlertStatusChanged -> {
+                _state.update { currentState ->
+                    currentState.copy(
+                        alerts = currentState.alerts.map { alert ->
+                            if (alert.id == event.alertId) {
+                                alert.copy(
+                                    status = event.status
+                                )
+                            } else {
+                                alert
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 
