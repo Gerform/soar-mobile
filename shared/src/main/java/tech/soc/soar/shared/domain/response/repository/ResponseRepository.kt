@@ -18,4 +18,9 @@ interface ResponseRepository {
         page: Int,
         pageSize: Int
     ): AppResult<ResponseRequestsPage>
+
+    suspend fun decideResponseRequest(
+        responseRequestId: Long,
+        decision: String
+    ): AppResult<CreateResponseResult>
 }

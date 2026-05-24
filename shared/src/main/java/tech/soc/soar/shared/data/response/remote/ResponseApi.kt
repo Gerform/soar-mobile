@@ -18,4 +18,9 @@ interface ResponseApi {
         skip: Int,
         limit: Int
     ): AppResult<ResponseRequestsPageDto>
+
+    suspend fun decideResponseRequest(
+        responseRequestId: Long,
+        decision: String
+    ): AppResult<CreateResponseResultDto>
 }

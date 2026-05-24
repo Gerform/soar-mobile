@@ -6,4 +6,9 @@ sealed interface ResponsesEvent {
     data object RefreshTriggered : ResponsesEvent
     data object NextPageClicked : ResponsesEvent
     data object PreviousPageClicked : ResponsesEvent
+
+    data class DecisionSelected(
+        val responseRequestId: Long,
+        val decision: String
+    ) : ResponsesEvent
 }

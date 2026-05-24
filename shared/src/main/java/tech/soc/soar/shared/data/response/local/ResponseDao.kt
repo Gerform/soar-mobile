@@ -38,4 +38,20 @@ interface ResponseDao {
     suspend fun countResponseRequestsByAlertId(
         alertId: Long
     ): Int
+
+    @Query(
+        """
+    UPDATE response_requests
+    SET status = :status,
+        updated_at = :updatedAt,
+        cached_at = :cachedAt
+    WHERE id = :responseRequestId
+    """
+    )
+    suspend fun updateResponseRequestStatus(
+        responseRequestId: Long,
+        status: String,
+        updatedAt: String,
+        cachedAt: Long
+    )
 }

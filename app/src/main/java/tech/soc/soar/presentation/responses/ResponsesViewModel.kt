@@ -10,11 +10,17 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.auth.model.SessionState
+import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
+import tech.soc.soar.shared.domain.response.model.ResponsePermissions
+import tech.soc.soar.shared.domain.response.usecase.DecideResponseRequestUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetResponseRequestsUseCase
 
 class ResponsesViewModel(
     private val alertId: Long,
-    private val getResponseRequestsUseCase: GetResponseRequestsUseCase
+    private val getResponseRequestsUseCase: GetResponseRequestsUseCase,
+    private val decideResponseRequestUseCase: DecideResponseRequestUseCase,
+    private val checkSessionUseCase: CheckSessionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ResponsesUiState())
@@ -24,6 +30,8 @@ class ResponsesViewModel(
     val effect = _effect.receiveAsFlow()
 
     init {
+        loadPermissions()
+
         loadResponses(
             page = 0,
             isRefresh = false
@@ -45,7 +53,9 @@ class ResponsesViewModel(
             }
 
             ResponsesEvent.RefreshTriggered -> {
-                if (!state.value.isLoading && !state.value.isRefreshing) {
+                if (!state.value.isLoading && !state.value.isRefreshing && state.value.decidingResponseId == null) {
+                    loadPermissions()
+
                     loadResponses(
                         page = state.value.page,
                         isRefresh = true
@@ -54,7 +64,7 @@ class ResponsesViewModel(
             }
 
             ResponsesEvent.NextPageClicked -> {
-                if (state.value.hasNextPage && !state.value.isLoading && !state.value.isRefreshing) {
+                if (state.value.hasNextPage && !state.value.isLoading && !state.value.isRefreshing && state.value.decidingResponseId == null) {
                     loadResponses(
                         page = state.value.page + 1,
                         isRefresh = false
@@ -63,12 +73,37 @@ class ResponsesViewModel(
             }
 
             ResponsesEvent.PreviousPageClicked -> {
-                if (state.value.page > 0 && !state.value.isLoading && !state.value.isRefreshing) {
+                if (state.value.page > 0 && !state.value.isLoading && !state.value.isRefreshing && state.value.decidingResponseId == null) {
                     loadResponses(
                         page = state.value.page - 1,
                         isRefresh = false
                     )
                 }
+            }
+
+            is ResponsesEvent.DecisionSelected -> {
+                decideResponse(
+                    responseRequestId = event.responseRequestId,
+                    decision = event.decision
+                )
+            }
+        }
+    }
+
+    private fun loadPermissions() {
+        viewModelScope.launch {
+            val sessionState = checkSessionUseCase()
+
+            val canDecideResponses = if (sessionState is SessionState.Authenticated) {
+                ResponsePermissions.canDecideResponse(sessionState.session.roles)
+            } else {
+                false
+            }
+
+            _state.update {
+                it.copy(
+                    canDecideResponses = canDecideResponses
+                )
             }
         }
     }
@@ -82,7 +117,8 @@ class ResponsesViewModel(
                 it.copy(
                     isLoading = !isRefresh,
                     isRefreshing = isRefresh,
-                    error = null
+                    error = null,
+                    statusMessage = null
                 )
             }
 
@@ -113,6 +149,62 @@ class ResponsesViewModel(
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
+                            error = result.error.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun decideResponse(
+        responseRequestId: Long,
+        decision: String
+    ) {
+        if (state.value.decidingResponseId != null) {
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    decidingResponseId = responseRequestId,
+                    error = null,
+                    statusMessage = null
+                )
+            }
+
+            when (
+                val result = decideResponseRequestUseCase(
+                    responseRequestId = responseRequestId,
+                    decision = decision
+                )
+            ) {
+                is AppResult.Success -> {
+                    val newStatus = decision.lowercase().trim()
+
+                    _state.update { currentState ->
+                        currentState.copy(
+                            decidingResponseId = null,
+                            responses = currentState.responses.map { response ->
+                                if (response.id == responseRequestId) {
+                                    response.copy(
+                                        status = newStatus
+                                    )
+                                } else {
+                                    response
+                                }
+                            },
+                            statusMessage = result.data.status,
+                            error = null
+                        )
+                    }
+                }
+
+                is AppResult.Error -> {
+                    _state.update {
+                        it.copy(
+                            decidingResponseId = null,
                             error = result.error.message
                         )
                     }

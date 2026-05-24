@@ -10,6 +10,9 @@ data class ResponsesUiState(
     val pageSize: Int = 50,
     val total: Int = 0,
     val fromCache: Boolean = false,
+    val canDecideResponses: Boolean = false,
+    val decidingResponseId: Long? = null,
+    val statusMessage: String? = null,
     val error: String? = null
 ) {
     val hasNextPage: Boolean

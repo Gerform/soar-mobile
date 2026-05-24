@@ -383,7 +383,9 @@ fun AppNavGraph(
                     val responsesViewModel: ResponsesViewModel = viewModel(
                         factory = ResponsesViewModelFactory(
                             alertId = alertId,
-                            getResponseRequestsUseCase = AppDependencies.getResponseRequestsUseCase
+                            getResponseRequestsUseCase = AppDependencies.getResponseRequestsUseCase,
+                            decideResponseRequestUseCase = AppDependencies.decideResponseRequestUseCase,
+                            checkSessionUseCase = AppDependencies.checkSessionUseCase
                         )
                     )
 

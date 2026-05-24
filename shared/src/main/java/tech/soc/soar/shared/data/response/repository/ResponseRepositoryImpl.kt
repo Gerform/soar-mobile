@@ -9,6 +9,7 @@ import tech.soc.soar.shared.data.response.remote.ResponseApi
 import tech.soc.soar.shared.domain.response.model.CreateResponseResult
 import tech.soc.soar.shared.domain.response.model.ResponseRequestsPage
 import tech.soc.soar.shared.domain.response.repository.ResponseRepository
+import java.time.Instant
 
 class ResponseRepositoryImpl(
     private val responseApi: ResponseApi,
@@ -96,6 +97,38 @@ class ResponseRepositoryImpl(
                 } else {
                     AppResult.Error(result.error)
                 }
+            }
+        }
+    }
+
+    override suspend fun decideResponseRequest(
+        responseRequestId: Long,
+        decision: String
+    ): AppResult<CreateResponseResult> {
+        return when (
+            val result = responseApi.decideResponseRequest(
+                responseRequestId = responseRequestId,
+                decision = decision
+            )
+        ) {
+            is AppResult.Success -> {
+                val newStatus = decision
+                val now = Instant.now().toString()
+
+                responseDao.updateResponseRequestStatus(
+                    responseRequestId = responseRequestId,
+                    status = newStatus,
+                    updatedAt = now,
+                    cachedAt = System.currentTimeMillis()
+                )
+
+                AppResult.Success(
+                    result.data.toDomain()
+                )
+            }
+
+            is AppResult.Error -> {
+                result
             }
         }
     }

@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.shared.domain.response.model.ResponseDecision
 import tech.soc.soar.shared.domain.response.model.ResponseRequest
+import tech.soc.soar.shared.domain.response.model.ResponseRequestStatus
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -48,7 +52,7 @@ fun ResponsesScreen(
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = false,
-        isLoading = state.isLoading,
+        isLoading = state.isLoading || state.decidingResponseId != null,
         onHomeClick = {
             onEvent(ResponsesEvent.HomeClicked)
         }
@@ -67,6 +71,15 @@ fun ResponsesScreen(
             if (state.fromCache) {
                 Text(
                     text = "Offline data",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            if (state.statusMessage != null) {
+                Text(
+                    text = state.statusMessage,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 8.dp)
@@ -142,7 +155,25 @@ fun ResponsesScreen(
                                 key = { response -> response.id }
                             ) { response ->
                                 ResponseRequestCard(
-                                    response = response
+                                    response = response,
+                                    canDecideResponses = state.canDecideResponses,
+                                    isDeciding = state.decidingResponseId == response.id,
+                                    onApproveClick = {
+                                        onEvent(
+                                            ResponsesEvent.DecisionSelected(
+                                                responseRequestId = response.id,
+                                                decision = ResponseDecision.APPROVED
+                                            )
+                                        )
+                                    },
+                                    onRejectClick = {
+                                        onEvent(
+                                            ResponsesEvent.DecisionSelected(
+                                                responseRequestId = response.id,
+                                                decision = ResponseDecision.REJECTED
+                                            )
+                                        )
+                                    }
                                 )
                             }
                         }
@@ -154,7 +185,7 @@ fun ResponsesScreen(
                 ResponsesPaginationControls(
                     page = state.page,
                     hasNextPage = state.hasNextPage,
-                    isLoading = state.isLoading || state.isRefreshing,
+                    isLoading = state.isLoading || state.isRefreshing || state.decidingResponseId != null,
                     onPreviousClick = {
                         onEvent(ResponsesEvent.PreviousPageClicked)
                     },
@@ -200,8 +231,16 @@ private fun ResponsesHeader(
 
 @Composable
 private fun ResponseRequestCard(
-    response: ResponseRequest
+    response: ResponseRequest,
+    canDecideResponses: Boolean,
+    isDeciding: Boolean,
+    onApproveClick: () -> Unit,
+    onRejectClick: () -> Unit
 ) {
+    val showDecisionActions =
+        canDecideResponses &&
+                response.status.lowercase().trim() == ResponseRequestStatus.CONFIRMATION
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -259,6 +298,16 @@ private fun ResponseRequestCard(
                 createdAt = response.createdAt,
                 updatedAt = response.updatedAt
             )
+
+            if (showDecisionActions) {
+                Spacer(modifier = Modifier.height(10.dp))
+
+                ResponseDecisionActions(
+                    isDeciding = isDeciding,
+                    onApproveClick = onApproveClick,
+                    onRejectClick = onRejectClick
+                )
+            }
         }
     }
 }
@@ -336,6 +385,43 @@ private fun ResponseDatesRow(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.End
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResponseDecisionActions(
+    isDeciding: Boolean,
+    onApproveClick: () -> Unit,
+    onRejectClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            enabled = !isDeciding,
+            onClick = onApproveClick
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = "Approve response",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.width(24.dp))
+
+        IconButton(
+            enabled = !isDeciding,
+            onClick = onRejectClick
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Reject response",
+                tint = MaterialTheme.colorScheme.error
             )
         }
     }
