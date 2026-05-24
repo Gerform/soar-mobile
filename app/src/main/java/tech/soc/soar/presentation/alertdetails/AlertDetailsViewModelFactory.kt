@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
+import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
 
@@ -15,7 +16,8 @@ class AlertDetailsViewModelFactory(
     private val markAlertViewedUseCase: MarkAlertViewedUseCase,
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
     private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
-    private val checkSessionUseCase: CheckSessionUseCase
+    private val checkSessionUseCase: CheckSessionUseCase,
+    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -28,7 +30,8 @@ class AlertDetailsViewModelFactory(
                 markAlertViewedUseCase = markAlertViewedUseCase,
                 updateAlertStatusUseCase = updateAlertStatusUseCase,
                 createBlockIpResponseUseCase = createBlockIpResponseUseCase,
-                checkSessionUseCase = checkSessionUseCase
+                checkSessionUseCase = checkSessionUseCase,
+                updateCachedAlertStatusUseCase = updateCachedAlertStatusUseCase
             ) as T
         }
 

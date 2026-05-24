@@ -10,9 +10,11 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.alert.model.AlertStatus
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
+import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.model.SessionState
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.response.model.ResponsePermissions
@@ -26,7 +28,8 @@ class AlertDetailsViewModel(
     private val markAlertViewedUseCase: MarkAlertViewedUseCase,
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
     private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
-    private val checkSessionUseCase: CheckSessionUseCase
+    private val checkSessionUseCase: CheckSessionUseCase,
+    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AlertDetailsUiState())
@@ -234,14 +237,31 @@ class AlertDetailsViewModel(
                 )
             ) {
                 is AppResult.Success -> {
-                    _state.update {
-                        it.copy(
+                    val newAlertStatus = AlertStatus.EXPECTATION
+
+                    updateCachedAlertStatusUseCase(
+                        alertId = alertId,
+                        status = newAlertStatus
+                    )
+
+                    _state.update { currentState ->
+                        currentState.copy(
                             isCreatingResponse = false,
                             selectedResponseTarget = null,
                             responseStatusMessage = result.data.status,
+                            details = currentState.details?.copy(
+                                status = newAlertStatus
+                            ),
                             error = null
                         )
                     }
+
+                    _effect.send(
+                        AlertDetailsEffect.AlertStatusUpdated(
+                            alertId = alertId,
+                            status = newAlertStatus
+                        )
+                    )
                 }
 
                 is AppResult.Error -> {

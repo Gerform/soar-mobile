@@ -194,4 +194,20 @@ class AlertRepositoryImpl(
             }
         }
     }
+
+    override suspend fun updateCachedAlertStatus(
+        alertId: Long,
+        status: String
+    ) {
+        alertDao.updateAlertStatus(
+            alertId = alertId,
+            status = status
+        )
+
+        alertDao.updateAlertDetailsStatus(
+            alertId = alertId,
+            status = status,
+            updatedAt = System.currentTimeMillis()
+        )
+    }
 }

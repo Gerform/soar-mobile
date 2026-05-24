@@ -25,6 +25,7 @@ import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertsPageUseCase
 import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
+import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.repository.AuthRepository
 import tech.soc.soar.shared.domain.auth.repository.SessionRepository
 import tech.soc.soar.shared.domain.auth.usecase.ChangePasswordUseCase
@@ -151,6 +152,12 @@ object AppDependencies {
             responseRepository = responseRepository,
             checkSessionUseCase = checkSessionUseCase,
             refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase by lazy {
+        UpdateCachedAlertStatusUseCase(
+            alertRepository = alertRepository
         )
     }
 

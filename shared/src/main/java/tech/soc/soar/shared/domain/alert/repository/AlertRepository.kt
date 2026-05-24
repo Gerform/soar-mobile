@@ -28,4 +28,9 @@ interface AlertRepository {
         alertId: Long,
         status: String
     ): AppResult<String>
+
+    suspend fun updateCachedAlertStatus(
+        alertId: Long,
+        status: String
+    )
 }
