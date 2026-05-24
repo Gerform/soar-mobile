@@ -13,13 +13,20 @@ import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
+import tech.soc.soar.shared.domain.auth.model.SessionState
+import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
+import tech.soc.soar.shared.domain.response.model.ResponsePermissions
+import tech.soc.soar.shared.domain.response.model.ResponseTargetType
+import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
 
 class AlertDetailsViewModel(
     private val alertId: Long,
     private val spaceName: String,
     private val getAlertDetailsUseCase: GetAlertDetailsUseCase,
     private val markAlertViewedUseCase: MarkAlertViewedUseCase,
-    private val updateAlertStatusUseCase: UpdateAlertStatusUseCase
+    private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
+    private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
+    private val checkSessionUseCase: CheckSessionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AlertDetailsUiState())
@@ -30,6 +37,7 @@ class AlertDetailsViewModel(
 
     init {
         loadDetails(isRefresh = false)
+        loadResponsePermissions()
     }
 
     fun onEvent(event: AlertDetailsEvent) {
@@ -53,13 +61,40 @@ class AlertDetailsViewModel(
             }
 
             AlertDetailsEvent.RefreshTriggered -> {
-                if (!state.value.isLoading && !state.value.isRefreshing && !state.value.isUpdatingStatus) {
+                if (!state.value.isLoading && !state.value.isRefreshing && !state.value.isUpdatingStatus && !state.value.isCreatingResponse) {
                     loadDetails(isRefresh = true)
+                    loadResponsePermissions()
+                }
+            }
+
+            AlertDetailsEvent.DismissResponseDialog -> {
+                _state.update {
+                    it.copy(
+                        selectedResponseTarget = null
+                    )
                 }
             }
 
             is AlertDetailsEvent.StatusSelected -> {
                 updateStatus(event.status)
+            }
+
+            is AlertDetailsEvent.ResponseTargetLongPressed -> {
+                if (!state.value.canCreateResponses) {
+                    return
+                }
+
+                _state.update {
+                    it.copy(
+                        selectedResponseTarget = event.target,
+                        error = null,
+                        responseStatusMessage = null
+                    )
+                }
+            }
+
+            is AlertDetailsEvent.CreateBlockIpResponseConfirmed -> {
+                createBlockIpResponse(event.message)
             }
         }
     }
@@ -106,6 +141,24 @@ class AlertDetailsViewModel(
         }
     }
 
+    private fun loadResponsePermissions() {
+        viewModelScope.launch {
+            val sessionState = checkSessionUseCase()
+
+            val canCreateResponses = if (sessionState is SessionState.Authenticated) {
+                ResponsePermissions.canCreateResponse(sessionState.session.roles)
+            } else {
+                false
+            }
+
+            _state.update {
+                it.copy(
+                    canCreateResponses = canCreateResponses
+                )
+            }
+        }
+    }
+
     private fun updateStatus(newStatus: String) {
         val currentDetails = state.value.details ?: return
 
@@ -113,7 +166,8 @@ class AlertDetailsViewModel(
             _state.update {
                 it.copy(
                     isUpdatingStatus = true,
-                    error = null
+                    error = null,
+                    responseStatusMessage = null
                 )
             }
 
@@ -147,6 +201,53 @@ class AlertDetailsViewModel(
                     _state.update {
                         it.copy(
                             isUpdatingStatus = false,
+                            error = result.error.message
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun createBlockIpResponse(message: String) {
+        val target = state.value.selectedResponseTarget ?: return
+
+        if (target.type != ResponseTargetType.IP) {
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isCreatingResponse = true,
+                    error = null,
+                    responseStatusMessage = null
+                )
+            }
+
+            when (
+                val result = createBlockIpResponseUseCase(
+                    alertId = alertId,
+                    ip = target.value,
+                    fieldName = target.fieldName,
+                    message = message
+                )
+            ) {
+                is AppResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            isCreatingResponse = false,
+                            selectedResponseTarget = null,
+                            responseStatusMessage = result.data.status,
+                            error = null
+                        )
+                    }
+                }
+
+                is AppResult.Error -> {
+                    _state.update {
+                        it.copy(
+                            isCreatingResponse = false,
                             error = result.error.message
                         )
                     }

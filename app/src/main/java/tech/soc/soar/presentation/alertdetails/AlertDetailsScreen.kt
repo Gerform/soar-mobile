@@ -2,6 +2,7 @@ package tech.soc.soar.presentation.alertdetails
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -23,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -34,14 +38,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.shared.domain.alert.model.AlertStatus
+import tech.soc.soar.shared.domain.response.model.ResponseTarget
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+
+private const val RESPONSE_TARGET_TAG = "response_target"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +65,7 @@ fun AlertDetailsScreen(
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = false,
-        isLoading = state.isLoading || state.isUpdatingStatus,
+        isLoading = state.isLoading || state.isUpdatingStatus || state.isCreatingResponse,
         onHomeClick = {
             onEvent(AlertDetailsEvent.HomeClicked)
         }
@@ -116,6 +129,15 @@ fun AlertDetailsScreen(
                             )
                         }
 
+                        if (state.responseStatusMessage != null) {
+                            Text(
+                                text = state.responseStatusMessage,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
                         if (state.error != null) {
                             Text(
                                 text = state.error,
@@ -125,11 +147,17 @@ fun AlertDetailsScreen(
                             )
                         }
 
-                        Text(
-                            text = state.details.rawBody,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.fillMaxWidth()
+                        ResponseAwareRawBody(
+                            rawBody = state.details.rawBody,
+                            targets = state.details.responseTargets,
+                            canCreateResponses = state.canCreateResponses,
+                            onTargetLongPressed = { target ->
+                                onEvent(
+                                    AlertDetailsEvent.ResponseTargetLongPressed(
+                                        target = target
+                                    )
+                                )
+                            }
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -149,6 +177,23 @@ fun AlertDetailsScreen(
                     }
                 }
             }
+        }
+
+        state.selectedResponseTarget?.let { target ->
+            CreateBlockIpResponseDialog(
+                target = target,
+                isCreating = state.isCreatingResponse,
+                onDismiss = {
+                    onEvent(AlertDetailsEvent.DismissResponseDialog)
+                },
+                onConfirm = { message ->
+                    onEvent(
+                        AlertDetailsEvent.CreateBlockIpResponseConfirmed(
+                            message = message
+                        )
+                    )
+                }
+            )
         }
     }
 }
@@ -186,6 +231,126 @@ private fun AlertDetailsHeader(
             )
         }
     }
+}
+
+@Composable
+private fun ResponseAwareRawBody(
+    rawBody: String,
+    targets: List<ResponseTarget>,
+    canCreateResponses: Boolean,
+    onTargetLongPressed: (ResponseTarget) -> Unit
+) {
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val targetColor = MaterialTheme.colorScheme.primary
+
+    val annotatedText = remember(
+        rawBody,
+        targets,
+        canCreateResponses
+    ) {
+        buildAnnotatedString {
+            var currentIndex = 0
+
+            val matches = targets
+                .flatMap { target ->
+                    Regex.escape(target.value)
+                        .toRegex()
+                        .findAll(rawBody)
+                        .map { match ->
+                            TargetTextRange(
+                                start = match.range.first,
+                                endExclusive = match.range.last + 1,
+                                target = target
+                            )
+                        }
+                        .toList()
+                }
+                .distinctBy { range ->
+                    "${range.start}:${range.endExclusive}:${range.target.value}:${range.target.fieldName}"
+                }
+                .sortedWith(
+                    compareBy<TargetTextRange> { it.start }
+                        .thenByDescending { it.endExclusive - it.start }
+                )
+                .filterNonOverlapping()
+
+            matches.forEach { range ->
+                if (range.start > currentIndex) {
+                    append(rawBody.substring(currentIndex, range.start))
+                }
+
+                if (canCreateResponses) {
+                    pushStringAnnotation(
+                        tag = RESPONSE_TARGET_TAG,
+                        annotation = range.target.toAnnotation()
+                    )
+
+                    withStyle(
+                        style = SpanStyle(
+                            color = targetColor,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    ) {
+                        append(rawBody.substring(range.start, range.endExclusive))
+                    }
+
+                    pop()
+                } else {
+                    append(rawBody.substring(range.start, range.endExclusive))
+                }
+
+                currentIndex = range.endExclusive
+            }
+
+            if (currentIndex < rawBody.length) {
+                append(rawBody.substring(currentIndex))
+            }
+        }
+    }
+
+    var layoutResult by remember {
+        mutableStateOf<TextLayoutResult?>(null)
+    }
+
+    BasicText(
+        text = annotatedText,
+        style = MaterialTheme.typography.bodyMedium.merge(
+            TextStyle(
+                color = textColor
+            )
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(annotatedText, canCreateResponses) {
+                detectTapGestures(
+                    onLongPress = { offset ->
+                        if (!canCreateResponses) {
+                            return@detectTapGestures
+                        }
+
+                        val layout = layoutResult ?: return@detectTapGestures
+                        val position = layout.getOffsetForPosition(offset)
+
+                        val annotation = annotatedText
+                            .getStringAnnotations(
+                                tag = RESPONSE_TARGET_TAG,
+                                start = position,
+                                end = position
+                            )
+                            .firstOrNull()
+                            ?: return@detectTapGestures
+
+                        val target = annotation.item.toResponseTarget()
+                            ?: return@detectTapGestures
+
+                        onTargetLongPressed(target)
+                    }
+                )
+            },
+        onTextLayout = { result ->
+            layoutResult = result
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -271,6 +436,124 @@ private fun AlertStatusRow(
             color = MaterialTheme.colorScheme.onBackground
         )
     }
+}
+
+@Composable
+private fun CreateBlockIpResponseDialog(
+    target: ResponseTarget,
+    isCreating: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var message by remember(target) {
+        mutableStateOf("")
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isCreating) {
+                onDismiss()
+            }
+        },
+        title = {
+            Text(
+                text = "Block IP"
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = target.value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = {
+                        message = it
+                    },
+                    enabled = !isCreating,
+                    label = {
+                        Text("Message")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !isCreating && message.isNotBlank(),
+                onClick = {
+                    onConfirm(message)
+                }
+            ) {
+                Text(
+                    text = if (isCreating) {
+                        "Sending..."
+                    } else {
+                        "Send"
+                    }
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                enabled = !isCreating,
+                onClick = onDismiss
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+private data class TargetTextRange(
+    val start: Int,
+    val endExclusive: Int,
+    val target: ResponseTarget
+)
+
+private fun List<TargetTextRange>.filterNonOverlapping(): List<TargetTextRange> {
+    val result = mutableListOf<TargetTextRange>()
+    var lastEnd = -1
+
+    forEach { range ->
+        if (range.start >= lastEnd) {
+            result.add(range)
+            lastEnd = range.endExclusive
+        }
+    }
+
+    return result
+}
+
+private fun ResponseTarget.toAnnotation(): String {
+    return listOf(
+        fieldName,
+        value,
+        type.name
+    ).joinToString(separator = "|")
+}
+
+private fun String.toResponseTarget(): ResponseTarget? {
+    val parts = split("|")
+
+    if (parts.size != 3) {
+        return null
+    }
+
+    val type = runCatching {
+        tech.soc.soar.shared.domain.response.model.ResponseTargetType.valueOf(parts[2])
+    }.getOrNull() ?: return null
+
+    return ResponseTarget(
+        fieldName = parts[0],
+        value = parts[1],
+        type = type
+    )
 }
 
 private fun formatAlertDetailsDate(rawDate: String): String {

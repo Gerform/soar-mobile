@@ -13,6 +13,9 @@ import tech.soc.soar.shared.data.auth.remote.AuthApi
 import tech.soc.soar.shared.data.auth.remote.AuthApiFactory
 import tech.soc.soar.shared.data.auth.repository.AuthRepositoryImpl
 import tech.soc.soar.shared.data.auth.repository.SessionRepositoryImpl
+import tech.soc.soar.shared.data.response.remote.ResponseApi
+import tech.soc.soar.shared.data.response.remote.ResponseApiFactory
+import tech.soc.soar.shared.data.response.repository.ResponseRepositoryFactory
 import tech.soc.soar.shared.domain.account.repository.AccountRepository
 import tech.soc.soar.shared.domain.account.usecase.DeleteSavedAccountUseCase
 import tech.soc.soar.shared.domain.account.usecase.GetLastUsedAccountUseCase
@@ -30,6 +33,8 @@ import tech.soc.soar.shared.domain.auth.usecase.ConfirmTwoFactorUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
+import tech.soc.soar.shared.domain.response.repository.ResponseRepository
+import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
 
 object AppDependencies {
 
@@ -122,6 +127,29 @@ object AppDependencies {
     val updateAlertStatusUseCase: UpdateAlertStatusUseCase by lazy {
         UpdateAlertStatusUseCase(
             alertRepository = alertRepository,
+            refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val responseApi: ResponseApi by lazy {
+        ResponseApiFactory.create(
+            apiConfig = ApiConfig(
+                baseUrl = ALERT_BASE_URL
+            ),
+            tokenProvider = tokenProvider
+        )
+    }
+
+    val responseRepository: ResponseRepository by lazy {
+        ResponseRepositoryFactory.create(
+            responseApi = responseApi
+        )
+    }
+
+    val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase by lazy {
+        CreateBlockIpResponseUseCase(
+            responseRepository = responseRepository,
+            checkSessionUseCase = checkSessionUseCase,
             refreshSessionUseCase = refreshSessionUseCase
         )
     }
