@@ -34,7 +34,10 @@ import tech.soc.soar.presentation.home.HomeEffect
 import tech.soc.soar.presentation.home.HomeScreen
 import tech.soc.soar.presentation.home.HomeViewModel
 import tech.soc.soar.presentation.home.HomeViewModelFactory
+import tech.soc.soar.presentation.responses.ResponsesEffect
 import tech.soc.soar.presentation.responses.ResponsesScreen
+import tech.soc.soar.presentation.responses.ResponsesViewModel
+import tech.soc.soar.presentation.responses.ResponsesViewModelFactory
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
 import tech.soc.soar.presentation.space.SpaceEffect
@@ -371,16 +374,43 @@ fun AppNavGraph(
                     )
                 }
 
-                composable(AppRoutes.RESPONSES) {
-                    ResponsesScreen(
-                        onHomeClick = {
-                            navController.navigate(AppRoutes.HOME) {
-                                popUpTo(AppRoutes.HOME) {
-                                    inclusive = false
+                composable(AppRoutes.RESPONSES) { backStackEntry ->
+                    val alertId = backStackEntry.arguments
+                        ?.getString(AppRoutes.ALERT_ID_ARGUMENT)
+                        ?.toLongOrNull()
+                        ?: 0L
+
+                    val responsesViewModel: ResponsesViewModel = viewModel(
+                        factory = ResponsesViewModelFactory(
+                            alertId = alertId,
+                            getResponseRequestsUseCase = AppDependencies.getResponseRequestsUseCase
+                        )
+                    )
+
+                    val responsesState by responsesViewModel.state.collectAsState()
+
+                    LaunchedEffect(Unit) {
+                        responsesViewModel.effect.collect { effect ->
+                            when (effect) {
+                                ResponsesEffect.NavigateBack -> {
+                                    navController.popBackStack()
                                 }
-                                launchSingleTop = true
+
+                                ResponsesEffect.NavigateToHome -> {
+                                    navController.navigate(AppRoutes.HOME) {
+                                        popUpTo(AppRoutes.HOME) {
+                                            inclusive = false
+                                        }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    ResponsesScreen(
+                        state = responsesState,
+                        onEvent = responsesViewModel::onEvent
                     )
                 }
             }

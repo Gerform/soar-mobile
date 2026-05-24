@@ -1,31 +1,26 @@
 package tech.soc.soar.shared.data.auth.local
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import tech.soc.soar.shared.domain.auth.model.AuthTokens
+import java.io.File
+import java.security.GeneralSecurityException
 
 class EncryptedTokenStorage(
     context: Context
 ) : TokenStorage {
 
+    private val appContext = context.applicationContext
+
     private val json = Json {
         ignoreUnknownKeys = true
     }
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
-
-    private val preferences = EncryptedSharedPreferences.create(
-        context,
-        FILE_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val preferences: SharedPreferences = createPreferencesSafely()
 
     override suspend fun saveTokens(tokens: AuthTokens) {
         preferences.edit()
@@ -85,7 +80,47 @@ class EncryptedTokenStorage(
     }
 
     override suspend fun clear() {
-        preferences.edit().clear().apply()
+        preferences.edit()
+            .clear()
+            .apply()
+    }
+
+    private fun createPreferencesSafely(): SharedPreferences {
+        return try {
+            createEncryptedPreferences()
+        } catch (exception: GeneralSecurityException) {
+            resetEncryptedPreferences()
+            createEncryptedPreferences()
+        } catch (exception: RuntimeException) {
+            resetEncryptedPreferences()
+            createEncryptedPreferences()
+        }
+    }
+
+    private fun createEncryptedPreferences(): SharedPreferences {
+        val masterKey = MasterKey.Builder(appContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        return EncryptedSharedPreferences.create(
+            appContext,
+            FILE_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
+    private fun resetEncryptedPreferences() {
+        appContext.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .commit()
+
+        appContext.deleteSharedPreferences(FILE_NAME)
+
+        val sharedPrefsDir = File(appContext.applicationInfo.dataDir, "shared_prefs")
+        File(sharedPrefsDir, "$FILE_NAME.xml").delete()
     }
 
     private companion object {
