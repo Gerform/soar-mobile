@@ -29,7 +29,7 @@ class AlertDetailsViewModel(
     val effect = _effect.receiveAsFlow()
 
     init {
-        loadDetails()
+        loadDetails(isRefresh = false)
     }
 
     fun onEvent(event: AlertDetailsEvent) {
@@ -46,19 +46,32 @@ class AlertDetailsViewModel(
                 }
             }
 
+            AlertDetailsEvent.ResponsesClicked -> {
+                viewModelScope.launch {
+                    _effect.send(AlertDetailsEffect.NavigateToResponses)
+                }
+            }
+
+            AlertDetailsEvent.RefreshTriggered -> {
+                if (!state.value.isLoading && !state.value.isRefreshing && !state.value.isUpdatingStatus) {
+                    loadDetails(isRefresh = true)
+                }
+            }
+
             is AlertDetailsEvent.StatusSelected -> {
                 updateStatus(event.status)
             }
         }
     }
 
-    private fun loadDetails() {
+    private fun loadDetails(isRefresh: Boolean) {
         viewModelScope.launch {
             markAlertViewedUseCase(alertId)
 
             _state.update {
                 it.copy(
-                    isLoading = true,
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
                     error = null
                 )
             }
@@ -73,6 +86,7 @@ class AlertDetailsViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             details = result.data,
                             error = null
                         )
@@ -83,6 +97,7 @@ class AlertDetailsViewModel(
                     _state.update {
                         it.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             error = result.error.message
                         )
                     }

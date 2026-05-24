@@ -34,6 +34,7 @@ import tech.soc.soar.presentation.home.HomeEffect
 import tech.soc.soar.presentation.home.HomeScreen
 import tech.soc.soar.presentation.home.HomeViewModel
 import tech.soc.soar.presentation.home.HomeViewModelFactory
+import tech.soc.soar.presentation.responses.ResponsesScreen
 import tech.soc.soar.presentation.root.RootUiState
 import tech.soc.soar.presentation.root.RootViewModel
 import tech.soc.soar.presentation.space.SpaceEffect
@@ -348,6 +349,15 @@ fun AppNavGraph(
                                             "${effect.alertId}|${effect.status}"
                                         )
                                 }
+
+                                AlertDetailsEffect.NavigateToResponses -> {
+                                    navController.navigate(
+                                        AppRoutes.responses(
+                                            spaceName = spaceName,
+                                            alertId = alertId
+                                        )
+                                    )
+                                }
                             }
                         }
                     }
@@ -355,6 +365,19 @@ fun AppNavGraph(
                     AlertDetailsScreen(
                         state = alertDetailsState,
                         onEvent = alertDetailsViewModel::onEvent
+                    )
+                }
+
+                composable(AppRoutes.RESPONSES) {
+                    ResponsesScreen(
+                        onHomeClick = {
+                            navController.navigate(AppRoutes.HOME) {
+                                popUpTo(AppRoutes.HOME) {
+                                    inclusive = false
+                                }
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
             }

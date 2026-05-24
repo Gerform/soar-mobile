@@ -19,10 +19,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +43,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertDetailsScreen(
     state: AlertDetailsUiState,
@@ -53,93 +57,133 @@ fun AlertDetailsScreen(
             onEvent(AlertDetailsEvent.HomeClicked)
         }
     ) {
-        when {
-            state.isLoading -> {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            state.error != null && state.details == null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = state.error,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            state.details != null -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    IconButton(
-                        onClick = {
-                            onEvent(AlertDetailsEvent.BackClicked)
-                        },
-                        modifier = Modifier.padding(bottom = 12.dp)
+        PullToRefreshBox(
+            isRefreshing = state.isRefreshing,
+            onRefresh = {
+                onEvent(AlertDetailsEvent.RefreshTriggered)
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            when {
+                state.isLoading && state.details == null -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        CircularProgressIndicator()
                     }
+                }
 
-                    if (state.details.fromCache) {
-                        Text(
-                            text = "Offline data",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-
-                    if (state.error != null) {
+                state.error != null && state.details == null -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
                             text = state.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
+                }
 
-                    Text(
-                        text = state.details.rawBody,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                state.details != null -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
+                    ) {
+                        AlertDetailsHeader(
+                            onBackClick = {
+                                onEvent(AlertDetailsEvent.BackClicked)
+                            },
+                            onResponsesClick = {
+                                onEvent(AlertDetailsEvent.ResponsesClicked)
+                            }
+                        )
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    AlertStatusRow(
-                        status = state.details.status,
-                        date = formatAlertDetailsDate(state.details.date),
-                        isUpdating = state.isUpdatingStatus,
-                        onStatusSelected = { selectedStatus ->
-                            onEvent(
-                                AlertDetailsEvent.StatusSelected(
-                                    status = selectedStatus
-                                )
+                        if (state.details.fromCache) {
+                            Text(
+                                text = "Offline data",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
                         }
-                    )
+
+                        if (state.error != null) {
+                            Text(
+                                text = state.error,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+
+                        Text(
+                            text = state.details.rawBody,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        AlertStatusRow(
+                            status = state.details.status,
+                            date = formatAlertDetailsDate(state.details.date),
+                            isUpdating = state.isUpdatingStatus,
+                            onStatusSelected = { selectedStatus ->
+                                onEvent(
+                                    AlertDetailsEvent.StatusSelected(
+                                        status = selectedStatus
+                                    )
+                                )
+                            }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AlertDetailsHeader(
+    onBackClick: () -> Unit,
+    onResponsesClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = onBackClick
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        TextButton(
+            onClick = onResponsesClick
+        ) {
+            Text(
+                text = "Responses",
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }

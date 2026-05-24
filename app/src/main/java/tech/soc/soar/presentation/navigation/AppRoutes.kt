@@ -12,11 +12,20 @@ object AppRoutes {
     const val ALERT_ID_ARGUMENT = "alertId"
     const val ALERT_DETAILS = "space/{$SPACE_ARGUMENT}/alerts/{$ALERT_ID_ARGUMENT}"
 
+    const val RESPONSES = "space/{$SPACE_ARGUMENT}/alerts/{$ALERT_ID_ARGUMENT}/responses"
+
     fun space(spaceName: String): String {
         return "space/$spaceName"
     }
 
     fun alertDetails(spaceName: String, alertId: Long): String {
         return "space/$spaceName/alerts/$alertId"
+    }
+
+    fun responses(
+        spaceName: String,
+        alertId: Long
+    ): String {
+        return "space/$spaceName/alerts/$alertId/responses"
     }
 }
