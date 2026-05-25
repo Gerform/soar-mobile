@@ -192,4 +192,28 @@ class ResponseRepositoryImpl(
             }
         }
     }
+
+    override suspend fun createUnblockIpResponse(
+        alertId: Long,
+        ip: String,
+        message: String
+    ): AppResult<CreateResponseResult> {
+        return when (
+            val result = responseApi.createUnblockIpResponse(
+                alertId = alertId,
+                ip = ip,
+                message = message
+            )
+        ) {
+            is AppResult.Success -> {
+                AppResult.Success(
+                    result.data.toDomain()
+                )
+            }
+
+            is AppResult.Error -> {
+                result
+            }
+        }
+    }
 }

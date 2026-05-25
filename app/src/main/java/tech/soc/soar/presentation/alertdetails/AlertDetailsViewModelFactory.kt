@@ -7,7 +7,7 @@ import tech.soc.soar.shared.domain.alert.usecase.MarkAlertViewedUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
-import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
+import tech.soc.soar.shared.domain.response.usecase.CreateResponseActionUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
 
 class AlertDetailsViewModelFactory(
@@ -16,7 +16,7 @@ class AlertDetailsViewModelFactory(
     private val getAlertDetailsUseCase: GetAlertDetailsUseCase,
     private val markAlertViewedUseCase: MarkAlertViewedUseCase,
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
-    private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
+    private val createResponseActionUseCase: CreateResponseActionUseCase,
     private val checkSessionUseCase: CheckSessionUseCase,
     private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase,
     private val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase
@@ -31,7 +31,7 @@ class AlertDetailsViewModelFactory(
                 getAlertDetailsUseCase = getAlertDetailsUseCase,
                 markAlertViewedUseCase = markAlertViewedUseCase,
                 updateAlertStatusUseCase = updateAlertStatusUseCase,
-                createBlockIpResponseUseCase = createBlockIpResponseUseCase,
+                createResponseActionUseCase = createResponseActionUseCase,
                 checkSessionUseCase = checkSessionUseCase,
                 updateCachedAlertStatusUseCase = updateCachedAlertStatusUseCase,
                 getSuccessfulActionsUseCase = getSuccessfulActionsUseCase

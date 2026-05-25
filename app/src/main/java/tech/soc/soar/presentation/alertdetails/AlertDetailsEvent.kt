@@ -1,6 +1,7 @@
 package tech.soc.soar.presentation.alertdetails
 
 import tech.soc.soar.shared.domain.response.model.ResponseTarget
+import tech.soc.soar.shared.domain.response.model.SuccessfulAction
 
 sealed interface AlertDetailsEvent {
     data object HomeClicked : AlertDetailsEvent
@@ -17,7 +18,11 @@ sealed interface AlertDetailsEvent {
         val target: ResponseTarget
     ) : AlertDetailsEvent
 
-    data class CreateBlockIpResponseConfirmed(
+    data class SuccessfulActionTargetLongPressed(
+        val action: SuccessfulAction
+    ) : AlertDetailsEvent
+
+    data class CreateResponseActionConfirmed(
         val message: String
     ) : AlertDetailsEvent
 }

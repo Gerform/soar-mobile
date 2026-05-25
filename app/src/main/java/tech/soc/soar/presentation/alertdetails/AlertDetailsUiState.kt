@@ -11,7 +11,7 @@ data class AlertDetailsUiState(
     val isCreatingResponse: Boolean = false,
     val canCreateResponses: Boolean = false,
     val details: AlertDetails? = null,
-    val selectedResponseTarget: ResponseTarget? = null,
+    val pendingResponseAction: PendingResponseAction? = null,
     val responseStatusMessage: String? = null,
     val error: String? = null,
     val successfulActions: List<SuccessfulAction> = emptyList(),

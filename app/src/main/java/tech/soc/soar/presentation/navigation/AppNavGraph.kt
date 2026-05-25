@@ -323,7 +323,7 @@ fun AppNavGraph(
                             getAlertDetailsUseCase = AppDependencies.getAlertDetailsUseCase,
                             markAlertViewedUseCase = AppDependencies.markAlertViewedUseCase,
                             updateAlertStatusUseCase = AppDependencies.updateAlertStatusUseCase,
-                            createBlockIpResponseUseCase = AppDependencies.createBlockIpResponseUseCase,
+                            createResponseActionUseCase = AppDependencies.createResponseActionUseCase,
                             checkSessionUseCase = AppDependencies.checkSessionUseCase,
                             updateCachedAlertStatusUseCase = AppDependencies.updateCachedAlertStatusUseCase,
                             getSuccessfulActionsUseCase = AppDependencies.getSuccessfulActionsUseCase

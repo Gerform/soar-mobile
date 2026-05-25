@@ -30,4 +30,10 @@ interface ResponseRepository {
         page: Int,
         pageSize: Int
     ): AppResult<SuccessfulActionsPage>
+
+    suspend fun createUnblockIpResponse(
+        alertId: Long,
+        ip: String,
+        message: String
+    ): AppResult<CreateResponseResult>
 }

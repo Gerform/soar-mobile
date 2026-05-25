@@ -35,7 +35,7 @@ import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
 import tech.soc.soar.shared.domain.response.repository.ResponseRepository
-import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
+import tech.soc.soar.shared.domain.response.usecase.CreateResponseActionUseCase
 import tech.soc.soar.shared.domain.response.usecase.DecideResponseRequestUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetResponseRequestsUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
@@ -151,14 +151,6 @@ object AppDependencies {
         )
     }
 
-    val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase by lazy {
-        CreateBlockIpResponseUseCase(
-            responseRepository = responseRepository,
-            checkSessionUseCase = checkSessionUseCase,
-            refreshSessionUseCase = refreshSessionUseCase
-        )
-    }
-
     val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase by lazy {
         UpdateCachedAlertStatusUseCase(
             alertRepository = alertRepository
@@ -183,6 +175,14 @@ object AppDependencies {
     val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase by lazy {
         GetSuccessfulActionsUseCase(
             responseRepository = responseRepository,
+            refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val createResponseActionUseCase: CreateResponseActionUseCase by lazy {
+        CreateResponseActionUseCase(
+            responseRepository = responseRepository,
+            checkSessionUseCase = checkSessionUseCase,
             refreshSessionUseCase = refreshSessionUseCase
         )
     }

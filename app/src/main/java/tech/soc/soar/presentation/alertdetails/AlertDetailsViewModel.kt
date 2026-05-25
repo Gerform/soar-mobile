@@ -17,9 +17,10 @@ import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.model.SessionState
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
+import tech.soc.soar.shared.domain.response.model.ResponseActionType
 import tech.soc.soar.shared.domain.response.model.ResponsePermissions
 import tech.soc.soar.shared.domain.response.model.ResponseTargetType
-import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
+import tech.soc.soar.shared.domain.response.usecase.CreateResponseActionUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
 
 class AlertDetailsViewModel(
@@ -28,7 +29,7 @@ class AlertDetailsViewModel(
     private val getAlertDetailsUseCase: GetAlertDetailsUseCase,
     private val markAlertViewedUseCase: MarkAlertViewedUseCase,
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
-    private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
+    private val createResponseActionUseCase: CreateResponseActionUseCase,
     private val checkSessionUseCase: CheckSessionUseCase,
     private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase,
     private val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase
@@ -77,7 +78,7 @@ class AlertDetailsViewModel(
             AlertDetailsEvent.DismissResponseDialog -> {
                 _state.update {
                     it.copy(
-                        selectedResponseTarget = null
+                        pendingResponseAction = null
                     )
                 }
             }
@@ -93,15 +94,45 @@ class AlertDetailsViewModel(
 
                 _state.update {
                     it.copy(
-                        selectedResponseTarget = event.target,
+                        pendingResponseAction = PendingResponseAction(
+                            type = ResponseActionType.BLOCK_IP,
+                            title = "Block IP",
+                            targetValue = event.target.value,
+                            fieldName = event.target.fieldName
+                        ),
                         error = null,
                         responseStatusMessage = null
                     )
                 }
             }
 
-            is AlertDetailsEvent.CreateBlockIpResponseConfirmed -> {
-                createBlockIpResponse(event.message)
+            is AlertDetailsEvent.SuccessfulActionTargetLongPressed -> {
+                if (!state.value.canCreateResponses) {
+                    return
+                }
+
+                val normalizedActionName = event.action.actionName.lowercase().trim()
+
+                if (normalizedActionName != ResponseActionType.BLOCK_IP) {
+                    return
+                }
+
+                _state.update {
+                    it.copy(
+                        pendingResponseAction = PendingResponseAction(
+                            type = ResponseActionType.UNBLOCK_IP,
+                            title = "Unblock IP",
+                            targetValue = event.action.targetValue,
+                            fieldName = null
+                        ),
+                        error = null,
+                        responseStatusMessage = null
+                    )
+                }
+            }
+
+            is AlertDetailsEvent.CreateResponseActionConfirmed -> {
+                createResponseAction(event.message)
             }
         }
     }
@@ -216,12 +247,8 @@ class AlertDetailsViewModel(
         }
     }
 
-    private fun createBlockIpResponse(message: String) {
-        val target = state.value.selectedResponseTarget ?: return
-
-        if (target.type != ResponseTargetType.IP) {
-            return
-        }
+    private fun createResponseAction(message: String) {
+        val action = state.value.pendingResponseAction ?: return
 
         viewModelScope.launch {
             _state.update {
@@ -233,10 +260,11 @@ class AlertDetailsViewModel(
             }
 
             when (
-                val result = createBlockIpResponseUseCase(
+                val result = createResponseActionUseCase(
+                    actionType = action.type,
                     alertId = alertId,
-                    ip = target.value,
-                    fieldName = target.fieldName,
+                    targetValue = action.targetValue,
+                    fieldName = action.fieldName,
                     message = message
                 )
             ) {
@@ -251,7 +279,7 @@ class AlertDetailsViewModel(
                     _state.update { currentState ->
                         currentState.copy(
                             isCreatingResponse = false,
-                            selectedResponseTarget = null,
+                            pendingResponseAction = null,
                             responseStatusMessage = result.data.status,
                             details = currentState.details?.copy(
                                 status = newAlertStatus
@@ -279,7 +307,6 @@ class AlertDetailsViewModel(
             }
         }
     }
-
     private fun loadSuccessfulActions() {
         viewModelScope.launch {
             when (

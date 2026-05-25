@@ -49,6 +49,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.shared.domain.alert.model.AlertStatus
+import tech.soc.soar.shared.domain.response.model.ResponseActionType
 import tech.soc.soar.shared.domain.response.model.ResponseTarget
 import tech.soc.soar.shared.domain.response.model.SuccessfulAction
 import java.time.Instant
@@ -181,7 +182,15 @@ fun AlertDetailsScreen(
                             Spacer(modifier = Modifier.height(18.dp))
 
                             SuccessfulActionsSection(
-                                actions = state.successfulActions
+                                actions = state.successfulActions,
+                                canCreateResponses = state.canCreateResponses,
+                                onSuccessfulActionTargetLongPressed = { action ->
+                                    onEvent(
+                                        AlertDetailsEvent.SuccessfulActionTargetLongPressed(
+                                            action = action
+                                        )
+                                    )
+                                }
                             )
                         }
                     }
@@ -189,16 +198,16 @@ fun AlertDetailsScreen(
             }
         }
 
-        state.selectedResponseTarget?.let { target ->
-            CreateBlockIpResponseDialog(
-                target = target,
+        state.pendingResponseAction?.let { action ->
+            CreateResponseActionDialog(
+                action = action,
                 isCreating = state.isCreatingResponse,
                 onDismiss = {
                     onEvent(AlertDetailsEvent.DismissResponseDialog)
                 },
                 onConfirm = { message ->
                     onEvent(
-                        AlertDetailsEvent.CreateBlockIpResponseConfirmed(
+                        AlertDetailsEvent.CreateResponseActionConfirmed(
                             message = message
                         )
                     )
@@ -449,13 +458,13 @@ private fun AlertStatusRow(
 }
 
 @Composable
-private fun CreateBlockIpResponseDialog(
-    target: ResponseTarget,
+private fun CreateResponseActionDialog(
+    action: PendingResponseAction,
     isCreating: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var message by remember(target) {
+    var message by remember(action) {
         mutableStateOf("")
     }
 
@@ -467,13 +476,13 @@ private fun CreateBlockIpResponseDialog(
         },
         title = {
             Text(
-                text = "Block IP"
+                text = action.title
             )
         },
         text = {
             Column {
                 Text(
-                    text = target.value,
+                    text = action.targetValue,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
@@ -489,7 +498,7 @@ private fun CreateBlockIpResponseDialog(
                     label = {
                         Text("Message")
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
@@ -519,7 +528,6 @@ private fun CreateBlockIpResponseDialog(
         }
     )
 }
-
 private data class TargetTextRange(
     val start: Int,
     val endExclusive: Int,
@@ -581,7 +589,9 @@ private fun formatAlertDetailsDate(rawDate: String): String {
 
 @Composable
 private fun SuccessfulActionsSection(
-    actions: List<SuccessfulAction>
+    actions: List<SuccessfulAction>,
+    canCreateResponses: Boolean,
+    onSuccessfulActionTargetLongPressed: (SuccessfulAction) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -597,17 +607,26 @@ private fun SuccessfulActionsSection(
         actions.forEach { action ->
             SuccessfulActionCard(
                 action = action,
+                canCreateResponses = canCreateResponses,
+                onTargetLongPressed = onSuccessfulActionTargetLongPressed,
                 modifier = Modifier.padding(bottom = 10.dp)
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SuccessfulActionCard(
     action: SuccessfulAction,
+    canCreateResponses: Boolean,
+    onTargetLongPressed: (SuccessfulAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val canUnblock =
+        canCreateResponses &&
+                action.actionName.lowercase().trim() == ResponseActionType.BLOCK_IP
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -641,7 +660,11 @@ private fun SuccessfulActionCard(
 
             SuccessfulActionInfoLine(
                 label = "Target",
-                value = action.targetValue
+                value = action.targetValue,
+                canLongPress = canUnblock,
+                onLongPress = {
+                    onTargetLongPressed(action)
+                }
             )
 
             SuccessfulActionInfoLine(
@@ -665,10 +688,13 @@ private fun SuccessfulActionCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SuccessfulActionInfoLine(
     label: String,
-    value: String
+    value: String,
+    canLongPress: Boolean = false,
+    onLongPress: (() -> Unit)? = null
 ) {
     if (value.isBlank()) {
         return
@@ -686,10 +712,35 @@ private fun SuccessfulActionInfoLine(
             fontWeight = FontWeight.SemiBold
         )
 
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .combinedClickable(
+                    enabled = canLongPress,
+                    onClick = {},
+                    onLongClick = {
+                        onLongPress?.invoke()
+                    }
+                )
+                .padding(
+                    horizontal = if (canLongPress) 6.dp else 0.dp,
+                    vertical = if (canLongPress) 3.dp else 0.dp
+                )
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (canLongPress) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                fontWeight = if (canLongPress) {
+                    FontWeight.SemiBold
+                } else {
+                    FontWeight.Normal
+                }
+            )
+        }
     }
 }

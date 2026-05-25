@@ -30,4 +30,10 @@ interface ResponseApi {
         skip: Int,
         limit: Int
     ): AppResult<SuccessfulActionsPageDto>
+
+    suspend fun createUnblockIpResponse(
+        alertId: Long,
+        ip: String,
+        message: String
+    ): AppResult<CreateResponseResultDto>
 }
