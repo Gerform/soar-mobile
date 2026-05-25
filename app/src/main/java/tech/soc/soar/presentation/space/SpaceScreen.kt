@@ -34,7 +34,13 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.text.style.TextAlign
+import tech.soc.soar.push.PushEvent
+import tech.soc.soar.push.PushEventBus
+import tech.soc.soar.push.PushForegroundState
 import tech.soc.soar.shared.domain.alert.model.AlertStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +50,39 @@ fun SpaceScreen(
     state: SpaceUiState,
     onEvent: (SpaceEvent) -> Unit
 ) {
+    val listState = rememberLazyListState()
+
+    DisposableEffect(spaceName) {
+        PushForegroundState.setOpenedSpace(spaceName)
+
+        onDispose {
+            PushForegroundState.clearOpenedSpace(spaceName)
+        }
+    }
+
+    LaunchedEffect(spaceName) {
+        PushEventBus.events.collect { event ->
+            when (event) {
+                is PushEvent.SpaceShouldRefresh -> {
+                    if (event.spaceName.equals(spaceName, ignoreCase = true)) {
+                        onEvent(
+                            SpaceEvent.PushRefreshReceived(
+                                scrollToTop = event.scrollToTop
+                            )
+                        )
+                    }
+                }
+
+                is PushEvent.ResponsesShouldRefresh -> Unit
+            }
+        }
+    }
+
+    LaunchedEffect(state.scrollToTopSignal) {
+        if (state.scrollToTopSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = true,
@@ -141,6 +180,7 @@ fun SpaceScreen(
 
                     else -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {

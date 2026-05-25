@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -28,6 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +38,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.push.PushEvent
+import tech.soc.soar.push.PushEventBus
+import tech.soc.soar.push.PushForegroundState
 import tech.soc.soar.shared.domain.response.model.ResponseDecision
 import tech.soc.soar.shared.domain.response.model.ResponseRequest
 import tech.soc.soar.shared.domain.response.model.ResponseRequestStatus
@@ -46,9 +52,45 @@ import java.time.format.DateTimeParseException
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResponsesScreen(
+    alertId: Long,
     state: ResponsesUiState,
     onEvent: (ResponsesEvent) -> Unit
 ) {
+
+    val listState = rememberLazyListState()
+
+    DisposableEffect(alertId) {
+        PushForegroundState.setOpenedResponses(alertId)
+
+        onDispose {
+            PushForegroundState.clearOpenedResponses(alertId)
+        }
+    }
+
+    LaunchedEffect(alertId) {
+        PushEventBus.events.collect { event ->
+            when (event) {
+                is PushEvent.ResponsesShouldRefresh -> {
+                    if (event.alertId == alertId) {
+                        onEvent(
+                            ResponsesEvent.PushRefreshReceived(
+                                scrollToTop = event.scrollToTop
+                            )
+                        )
+                    }
+                }
+
+                is PushEvent.SpaceShouldRefresh -> Unit
+            }
+        }
+    }
+
+    LaunchedEffect(state.scrollToTopSignal) {
+        if (state.scrollToTopSignal > 0) {
+            listState.animateScrollToItem(0)
+        }
+    }
+
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = false,
@@ -147,6 +189,7 @@ fun ResponsesScreen(
 
                     else -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {

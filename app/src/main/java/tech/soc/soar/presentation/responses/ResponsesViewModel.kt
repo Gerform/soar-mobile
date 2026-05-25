@@ -90,6 +90,16 @@ class ResponsesViewModel(
                     decision = event.decision
                 )
             }
+
+            is ResponsesEvent.PushRefreshReceived -> {
+                if (!state.value.isLoading && !state.value.isRefreshing && state.value.decidingResponseId == null) {
+                    loadResponses(
+                        page = 0,
+                        isRefresh = true,
+                        scrollToTopAfterSuccess = event.scrollToTop
+                    )
+                }
+            }
         }
     }
 
@@ -113,7 +123,8 @@ class ResponsesViewModel(
 
     private fun loadResponses(
         page: Int,
-        isRefresh: Boolean
+        isRefresh: Boolean,
+        scrollToTopAfterSuccess: Boolean = false
     ) {
         viewModelScope.launch {
             _state.update {
@@ -133,8 +144,8 @@ class ResponsesViewModel(
                 )
             ) {
                 is AppResult.Success -> {
-                    _state.update {
-                        it.copy(
+                    _state.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
                             isRefreshing = false,
                             responses = result.data.responseRequests,
@@ -142,6 +153,11 @@ class ResponsesViewModel(
                             pageSize = result.data.limit,
                             total = result.data.total,
                             fromCache = result.data.fromCache,
+                            scrollToTopSignal = if (scrollToTopAfterSuccess) {
+                                currentState.scrollToTopSignal + 1
+                            } else {
+                                currentState.scrollToTopSignal
+                            },
                             error = null
                         )
                     }

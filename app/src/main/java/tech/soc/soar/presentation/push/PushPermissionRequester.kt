@@ -181,8 +181,6 @@ private suspend fun registerPushTokenForAccount(
             }
 
             is AppResult.Error -> {
-                // Не зберігаємо локальний дозвіл.
-                // Якщо запит не вдався, при наступному логіні можна буде спробувати ще раз.
             }
         }
     }

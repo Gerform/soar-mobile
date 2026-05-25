@@ -457,6 +457,7 @@ fun AppNavGraph(
                     }
 
                     ResponsesScreen(
+                        alertId = alertId,
                         state = responsesState,
                         onEvent = responsesViewModel::onEvent
                     )

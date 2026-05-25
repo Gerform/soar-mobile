@@ -112,12 +112,22 @@ class SpaceViewModel(
                     )
                 }
             }
+            is SpaceEvent.PushRefreshReceived -> {
+                if (!state.value.isLoading && !state.value.isRefreshing) {
+                    loadAlerts(
+                        page = 0,
+                        isRefresh = true,
+                        scrollToTopAfterSuccess = event.scrollToTop
+                    )
+                }
+            }
         }
     }
 
     private fun loadAlerts(
         page: Int,
-        isRefresh: Boolean
+        isRefresh: Boolean,
+        scrollToTopAfterSuccess: Boolean = false
     ) {
         viewModelScope.launch {
             _state.update {
@@ -136,14 +146,18 @@ class SpaceViewModel(
                 )
             ) {
                 is AppResult.Success -> {
-                    _state.update {
-                        it.copy(
+                    _state.update { currentState ->
+                        currentState.copy(
                             isLoading = false,
                             isRefreshing = false,
                             alerts = result.data.alerts,
-                            page = result.data.page,
-                            hasNextPage = result.data.hasNextPage,
+                            page = page,
                             fromCache = result.data.fromCache,
+                            scrollToTopSignal = if (scrollToTopAfterSuccess) {
+                                currentState.scrollToTopSignal + 1
+                            } else {
+                                currentState.scrollToTopSignal
+                            },
                             error = null
                         )
                     }

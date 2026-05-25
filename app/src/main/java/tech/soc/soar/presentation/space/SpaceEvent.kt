@@ -15,4 +15,8 @@ sealed interface SpaceEvent {
         val alertId: Long,
         val status: String
     ) : SpaceEvent
+
+    data class PushRefreshReceived(
+        val scrollToTop: Boolean = true
+    ) : SpaceEvent
 }

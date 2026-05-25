@@ -9,7 +9,8 @@ data class SpaceUiState(
     val page: Int = 0,
     val hasNextPage: Boolean = false,
     val fromCache: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val scrollToTopSignal: Int = 0
 ) {
     val showPagination: Boolean
         get() = page > 0 || hasNextPage

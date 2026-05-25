@@ -11,4 +11,8 @@ sealed interface ResponsesEvent {
         val responseRequestId: Long,
         val decision: String
     ) : ResponsesEvent
+
+    data class PushRefreshReceived(
+        val scrollToTop: Boolean = true
+    ) : ResponsesEvent
 }

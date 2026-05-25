@@ -13,7 +13,8 @@ data class ResponsesUiState(
     val canDecideResponses: Boolean = false,
     val decidingResponseId: Long? = null,
     val statusMessage: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val scrollToTopSignal: Int = 0
 ) {
     val hasNextPage: Boolean
         get() = (page + 1) * pageSize < total
