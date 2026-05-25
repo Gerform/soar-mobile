@@ -64,6 +64,13 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             spaceName.isNotBlank() &&
             PushForegroundState.isSpaceOpened(spaceName)
         ) {
+            if (alertId != null) {
+                InAppNotificationCenter.recordNewAlert(
+                    spaceName = spaceName,
+                    alertId = alertId
+                )
+            }
+
             PushEventBus.emit(
                 PushEvent.SpaceShouldRefresh(
                     spaceName = spaceName,

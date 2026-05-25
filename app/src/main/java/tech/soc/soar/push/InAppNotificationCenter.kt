@@ -37,6 +37,10 @@ data class InAppNotificationState(
     fun approvalRequestIdsForAlert(alertId: Long): Set<Long> {
         return approvalRequestIdsByAlert[alertId].orEmpty()
     }
+
+    fun hasNotificationsForSpace(spaceName: String): Boolean {
+        return badgeCountForSpace(spaceName) > 0
+    }
 }
 
 object InAppNotificationCenter {

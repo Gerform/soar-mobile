@@ -36,7 +36,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.presentation.components.NotificationBadge
 import tech.soc.soar.push.InAppNotificationCenter
@@ -61,12 +64,37 @@ fun SpaceScreen(
     val listState = rememberLazyListState()
     val context = LocalContext.current
     val notificationState by InAppNotificationCenter.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(spaceName) {
         PushForegroundState.setOpenedSpace(spaceName)
 
         onDispose {
             PushForegroundState.clearOpenedSpace(spaceName)
+        }
+    }
+
+    DisposableEffect(
+        lifecycleOwner,
+        spaceName,
+        notificationState
+    ) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (notificationState.hasNotificationsForSpace(spaceName)) {
+                    onEvent(
+                        SpaceEvent.PushRefreshReceived(
+                            scrollToTop = true
+                        )
+                    )
+                }
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
