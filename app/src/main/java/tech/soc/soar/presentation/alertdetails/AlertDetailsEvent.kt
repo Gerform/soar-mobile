@@ -25,4 +25,9 @@ sealed interface AlertDetailsEvent {
     data class CreateResponseActionConfirmed(
         val message: String
     ) : AlertDetailsEvent
+
+    data class ExternalAlertStatusChanged(
+        val alertId: Long,
+        val status: String
+    ) : AlertDetailsEvent
 }

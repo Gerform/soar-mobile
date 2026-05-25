@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.soc.soar.shared.core.result.AppResult
+import tech.soc.soar.shared.domain.alert.usecase.GetAlertDetailsUseCase
 import tech.soc.soar.shared.domain.auth.model.SessionState
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.response.model.ResponsePermissions
@@ -18,9 +19,11 @@ import tech.soc.soar.shared.domain.response.usecase.GetResponseRequestsUseCase
 
 class ResponsesViewModel(
     private val alertId: Long,
+    private val spaceName: String,
     private val getResponseRequestsUseCase: GetResponseRequestsUseCase,
     private val decideResponseRequestUseCase: DecideResponseRequestUseCase,
-    private val checkSessionUseCase: CheckSessionUseCase
+    private val checkSessionUseCase: CheckSessionUseCase,
+    private val getAlertDetailsUseCase: GetAlertDetailsUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ResponsesUiState())
@@ -181,7 +184,7 @@ class ResponsesViewModel(
                 )
             ) {
                 is AppResult.Success -> {
-                    val newStatus = decision.lowercase().trim()
+                    val newResponseStatus = decision.lowercase().trim()
 
                     _state.update { currentState ->
                         currentState.copy(
@@ -189,7 +192,7 @@ class ResponsesViewModel(
                             responses = currentState.responses.map { response ->
                                 if (response.id == responseRequestId) {
                                     response.copy(
-                                        status = newStatus
+                                        status = newResponseStatus
                                     )
                                 } else {
                                     response
@@ -199,6 +202,8 @@ class ResponsesViewModel(
                             error = null
                         )
                     }
+
+                    refreshAlertStatusAfterDecision()
                 }
 
                 is AppResult.Error -> {
@@ -215,5 +220,29 @@ class ResponsesViewModel(
 
     private companion object {
         const val PAGE_SIZE = 50
+    }
+
+    private fun refreshAlertStatusAfterDecision() {
+        viewModelScope.launch {
+            when (
+                val result = getAlertDetailsUseCase(
+                    alertId = alertId,
+                    spaceName = spaceName
+                )
+            ) {
+                is AppResult.Success -> {
+                    _effect.send(
+                        ResponsesEffect.AlertStatusUpdated(
+                            alertId = alertId,
+                            status = result.data.status
+                        )
+                    )
+                }
+
+                is AppResult.Error -> {
+
+                }
+            }
+        }
     }
 }

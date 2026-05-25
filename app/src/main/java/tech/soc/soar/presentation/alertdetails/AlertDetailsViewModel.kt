@@ -134,6 +134,13 @@ class AlertDetailsViewModel(
             is AlertDetailsEvent.CreateResponseActionConfirmed -> {
                 createResponseAction(event.message)
             }
+
+            is AlertDetailsEvent.ExternalAlertStatusChanged -> {
+                applyExternalAlertStatus(
+                    alertId = event.alertId,
+                    status = event.status
+                )
+            }
         }
     }
 
@@ -328,6 +335,37 @@ class AlertDetailsViewModel(
 
                 }
             }
+        }
+    }
+
+    private fun applyExternalAlertStatus(
+        alertId: Long,
+        status: String
+    ) {
+        if (alertId != this.alertId) {
+            return
+        }
+
+        viewModelScope.launch {
+            updateCachedAlertStatusUseCase(
+                alertId = alertId,
+                status = status
+            )
+
+            _state.update { currentState ->
+                currentState.copy(
+                    details = currentState.details?.copy(
+                        status = status
+                    )
+                )
+            }
+
+            _effect.send(
+                AlertDetailsEffect.AlertStatusUpdated(
+                    alertId = alertId,
+                    status = status
+                )
+            )
         }
     }
 

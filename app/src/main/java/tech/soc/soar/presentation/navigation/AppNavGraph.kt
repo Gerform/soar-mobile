@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import tech.soc.soar.di.AppDependencies
 import tech.soc.soar.presentation.alertdetails.AlertDetailsEffect
+import tech.soc.soar.presentation.alertdetails.AlertDetailsEvent
 import tech.soc.soar.presentation.alertdetails.AlertDetailsScreen
 import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModel
 import tech.soc.soar.presentation.alertdetails.AlertDetailsViewModelFactory
@@ -332,6 +333,34 @@ fun AppNavGraph(
 
                     val alertDetailsState by alertDetailsViewModel.state.collectAsState()
 
+                    val updatedAlertStatus by backStackEntry.savedStateHandle
+                        .getStateFlow(UPDATED_ALERT_STATUS_KEY, "")
+                        .collectAsState()
+
+                    LaunchedEffect(updatedAlertStatus) {
+                        if (updatedAlertStatus.isBlank()) {
+                            return@LaunchedEffect
+                        }
+
+                        val parts = updatedAlertStatus.split("|")
+
+                        if (parts.size == 2) {
+                            val updatedAlertId = parts[0].toLongOrNull()
+                            val updatedStatus = parts[1]
+
+                            if (updatedAlertId != null) {
+                                alertDetailsViewModel.onEvent(
+                                    AlertDetailsEvent.ExternalAlertStatusChanged(
+                                        alertId = updatedAlertId,
+                                        status = updatedStatus
+                                    )
+                                )
+                            }
+                        }
+
+                        backStackEntry.savedStateHandle[UPDATED_ALERT_STATUS_KEY] = ""
+                    }
+
                     LaunchedEffect(Unit) {
                         alertDetailsViewModel.effect.collect { effect ->
                             when (effect) {
@@ -381,12 +410,18 @@ fun AppNavGraph(
                         ?.toLongOrNull()
                         ?: 0L
 
+                    val spaceName = backStackEntry.arguments
+                        ?.getString(AppRoutes.SPACE_ARGUMENT)
+                        .orEmpty()
+
                     val responsesViewModel: ResponsesViewModel = viewModel(
                         factory = ResponsesViewModelFactory(
                             alertId = alertId,
+                            spaceName = spaceName,
                             getResponseRequestsUseCase = AppDependencies.getResponseRequestsUseCase,
                             decideResponseRequestUseCase = AppDependencies.decideResponseRequestUseCase,
-                            checkSessionUseCase = AppDependencies.checkSessionUseCase
+                            checkSessionUseCase = AppDependencies.checkSessionUseCase,
+                            getAlertDetailsUseCase = AppDependencies.getAlertDetailsUseCase
                         )
                     )
 
@@ -406,6 +441,15 @@ fun AppNavGraph(
                                         }
                                         launchSingleTop = true
                                     }
+                                }
+
+                                is ResponsesEffect.AlertStatusUpdated -> {
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set(
+                                            UPDATED_ALERT_STATUS_KEY,
+                                            "${effect.alertId}|${effect.status}"
+                                        )
                                 }
                             }
                         }
