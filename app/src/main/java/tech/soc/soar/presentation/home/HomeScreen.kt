@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,6 +25,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +37,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import tech.soc.soar.di.AppDependencies
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.presentation.components.NotificationBadge
 import tech.soc.soar.presentation.push.PushPermissionRequester
+import tech.soc.soar.push.InAppNotificationCenter
+import tech.soc.soar.push.InAppNotificationState
 
 @Composable
 fun HomeScreen(
@@ -50,6 +56,8 @@ fun HomeScreen(
             markMobilePushEnabledForAccountUseCase = AppDependencies.markMobilePushEnabledForAccountUseCase
         )
     }
+    val notificationState by InAppNotificationCenter.state.collectAsState()
+
 
     AppScreenScaffold(
         isHomeClickable = true,
@@ -88,6 +96,7 @@ fun HomeScreen(
                     else -> {
                         SpacesGrid(
                             spaces = state.spaces,
+                            notificationState = notificationState,
                             onSpaceClick = { space ->
                                 onEvent(HomeEvent.SpaceClicked(space))
                             }
@@ -124,6 +133,7 @@ fun HomeScreen(
 @Composable
 private fun SpacesGrid(
     spaces: List<String>,
+    notificationState: InAppNotificationState,
     onSpaceClick: (String) -> Unit
 ) {
     val columns = if (spaces.size == 1) {
@@ -170,6 +180,7 @@ private fun SpacesGrid(
                 ) {
                     SpaceCircleButton(
                         spaceName = spaces.first(),
+                        badgeCount = notificationState.badgeCountForSpace(spaces.first()),
                         gradient = spaceGradient(0),
                         modifier = Modifier.size(150.dp),
                         onClick = {
@@ -182,6 +193,7 @@ private fun SpacesGrid(
             itemsIndexed(spaces) { index, space ->
                 SpaceCircleButton(
                     spaceName = space,
+                    badgeCount = notificationState.badgeCountForSpace(spaces.first()),
                     gradient = spaceGradient(index),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -198,24 +210,37 @@ private fun SpacesGrid(
 @Composable
 private fun SpaceCircleButton(
     spaceName: String,
+    badgeCount: Int,
     gradient: Brush,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Box(
         modifier = modifier
-            .clip(CircleShape)
-            .background(gradient)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = spaceName,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(CircleShape)
+                .background(gradient)
+                .clickable(onClick = onClick)
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = spaceName,
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        NotificationBadge(
+            count = badgeCount,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 4.dp, y = (-4).dp)
         )
     }
 }

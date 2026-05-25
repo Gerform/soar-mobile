@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,16 +32,27 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import kotlinx.coroutines.delay
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.presentation.components.NotificationBadge
+import tech.soc.soar.push.InAppNotificationCenter
 import tech.soc.soar.push.PushEvent
 import tech.soc.soar.push.PushEventBus
 import tech.soc.soar.push.PushForegroundState
+import tech.soc.soar.push.SoarNotificationIds
 import tech.soc.soar.shared.domain.response.model.ResponseDecision
 import tech.soc.soar.shared.domain.response.model.ResponseRequest
 import tech.soc.soar.shared.domain.response.model.ResponseRequestStatus
@@ -56,8 +68,13 @@ fun ResponsesScreen(
     state: ResponsesUiState,
     onEvent: (ResponsesEvent) -> Unit
 ) {
-
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val notificationState by InAppNotificationCenter.state.collectAsState()
+
+    var temporarilyHighlightedResponseIds by remember(alertId) {
+        mutableStateOf(emptySet<Long>())
+    }
 
     DisposableEffect(alertId) {
         PushForegroundState.setOpenedResponses(alertId)
@@ -68,15 +85,56 @@ fun ResponsesScreen(
     }
 
     LaunchedEffect(alertId) {
+        val responseIds = InAppNotificationCenter.approvalRequestIdsForAlert(alertId)
+
+        if (responseIds.isNotEmpty()) {
+            temporarilyHighlightedResponseIds = responseIds
+
+            val removedIds = InAppNotificationCenter.clearApprovalRequestsForAlert(alertId)
+            val notificationManager = NotificationManagerCompat.from(context)
+
+            removedIds.forEach { responseRequestId ->
+                notificationManager.cancel(
+                    SoarNotificationIds.approvalRequestNotificationId(responseRequestId)
+                )
+            }
+
+            delay(2500)
+
+            temporarilyHighlightedResponseIds = emptySet()
+        }
+    }
+
+    LaunchedEffect(alertId) {
         PushEventBus.events.collect { event ->
             when (event) {
                 is PushEvent.ResponsesShouldRefresh -> {
                     if (event.alertId == alertId) {
+                        val responseIds = InAppNotificationCenter.approvalRequestIdsForAlert(alertId)
+
+                        if (responseIds.isNotEmpty()) {
+                            temporarilyHighlightedResponseIds = responseIds
+
+                            val removedIds = InAppNotificationCenter.clearApprovalRequestsForAlert(alertId)
+                            val notificationManager = NotificationManagerCompat.from(context)
+
+                            removedIds.forEach { responseRequestId ->
+                                notificationManager.cancel(
+                                    SoarNotificationIds.approvalRequestNotificationId(responseRequestId)
+                                )
+                            }
+                        }
+
                         onEvent(
                             ResponsesEvent.PushRefreshReceived(
                                 scrollToTop = event.scrollToTop
                             )
                         )
+
+                        if (responseIds.isNotEmpty()) {
+                            delay(2500)
+                            temporarilyHighlightedResponseIds = emptySet()
+                        }
                     }
                 }
 
@@ -197,10 +255,15 @@ fun ResponsesScreen(
                                 items = state.responses,
                                 key = { response -> response.id }
                             ) { response ->
+                                val isNewResponse =
+                                    response.id in temporarilyHighlightedResponseIds ||
+                                            notificationState.hasApprovalRequest(response.id)
+
                                 ResponseRequestCard(
                                     response = response,
                                     canDecideResponses = state.canDecideResponses,
                                     isDeciding = state.decidingResponseId == response.id,
+                                    isNewResponse = isNewResponse,
                                     onApproveClick = {
                                         onEvent(
                                             ResponsesEvent.DecisionSelected(
@@ -277,6 +340,7 @@ private fun ResponseRequestCard(
     response: ResponseRequest,
     canDecideResponses: Boolean,
     isDeciding: Boolean,
+    isNewResponse: Boolean,
     onApproveClick: () -> Unit,
     onRejectClick: () -> Unit
 ) {
@@ -288,7 +352,13 @@ private fun ResponseRequestCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .background(
+                if (isNewResponse) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                }
+            )
             .padding(14.dp)
     ) {
         Column {
@@ -352,6 +422,13 @@ private fun ResponseRequestCard(
                 )
             }
         }
+
+        NotificationBadge(
+            count = if (isNewResponse) 1 else 0,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 6.dp, y = (-6).dp)
+        )
     }
 }
 

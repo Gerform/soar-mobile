@@ -2,46 +2,54 @@ package tech.soc.soar.presentation.space
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.presentation.components.NotificationBadge
+import tech.soc.soar.push.InAppNotificationCenter
+import tech.soc.soar.push.PushEvent
+import tech.soc.soar.push.PushEventBus
+import tech.soc.soar.push.PushForegroundState
+import tech.soc.soar.push.SoarNotificationIds
 import tech.soc.soar.shared.domain.alert.model.AlertItem
+import tech.soc.soar.shared.domain.alert.model.AlertStatus
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.text.style.TextAlign
-import tech.soc.soar.push.PushEvent
-import tech.soc.soar.push.PushEventBus
-import tech.soc.soar.push.PushForegroundState
-import tech.soc.soar.shared.domain.alert.model.AlertStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +59,8 @@ fun SpaceScreen(
     onEvent: (SpaceEvent) -> Unit
 ) {
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val notificationState by InAppNotificationCenter.state.collectAsState()
 
     DisposableEffect(spaceName) {
         PushForegroundState.setOpenedSpace(spaceName)
@@ -83,6 +93,7 @@ fun SpaceScreen(
             listState.animateScrollToItem(0)
         }
     }
+
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = true,
@@ -188,11 +199,35 @@ fun SpaceScreen(
                                 items = state.alerts,
                                 key = { alert -> alert.id }
                             ) { alert ->
+                                val approvalCount = notificationState.approvalCountForAlert(alert.id)
+                                val hasNewAlertNotification = notificationState.hasNewAlert(alert.id)
+
+                                val badgeCount = approvalCount + if (hasNewAlertNotification) {
+                                    1
+                                } else {
+                                    0
+                                }
+
                                 AlertListItem(
                                     alert = alert,
+                                    badgeCount = badgeCount,
+                                    forceHighlight = hasNewAlertNotification || approvalCount > 0,
                                     onClick = {
+                                        if (hasNewAlertNotification) {
+                                            InAppNotificationCenter.clearNewAlert(alert.id)
+
+                                            NotificationManagerCompat.from(context)
+                                                .cancel(
+                                                    SoarNotificationIds.newAlertNotificationId(
+                                                        alert.id
+                                                    )
+                                                )
+                                        }
+
                                         onEvent(
-                                            SpaceEvent.AlertClicked(alert.id)
+                                            SpaceEvent.AlertClicked(
+                                                alertId = alert.id
+                                            )
                                         )
                                     }
                                 )
@@ -222,11 +257,14 @@ fun SpaceScreen(
 @Composable
 private fun AlertListItem(
     alert: AlertItem,
+    badgeCount: Int,
+    forceHighlight: Boolean,
     onClick: () -> Unit
 ) {
     val isDarkTheme = isSystemInDarkTheme()
 
-    val shouldHighlightAsNew = alert.shouldBeHighlightedAsNew()
+    val shouldHighlightAsNew =
+        alert.shouldBeHighlightedAsNew() || forceHighlight
 
     val containerColor = when {
         shouldHighlightAsNew && isDarkTheme -> {
@@ -256,13 +294,16 @@ private fun AlertListItem(
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text(
                 text = alert.reason,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(end = 28.dp)
             )
 
             Spacer(modifier = Modifier.padding(top = 8.dp))
@@ -288,6 +329,13 @@ private fun AlertListItem(
                 )
             }
         }
+
+        NotificationBadge(
+            count = badgeCount,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 6.dp, y = (-6).dp)
+        )
     }
 }
 

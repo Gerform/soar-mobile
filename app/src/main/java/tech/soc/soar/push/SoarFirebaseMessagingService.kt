@@ -1,6 +1,7 @@
 package tech.soc.soar.push
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -44,6 +45,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
 
             else -> {
                 showNotification(
+                    notificationId = System.currentTimeMillis().toInt(),
                     title = message.notification?.title ?: DEFAULT_TITLE,
                     body = message.notification?.body ?: DEFAULT_BODY
                 )
@@ -55,6 +57,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
         message: RemoteMessage,
         data: Map<String, String>
     ) {
+        val alertId = data["alert_id"]?.toLongOrNull()
         val spaceName = data["space_name"].orEmpty()
 
         if (
@@ -71,7 +74,19 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
+        if (alertId != null && spaceName.isNotBlank()) {
+            InAppNotificationCenter.recordNewAlert(
+                spaceName = spaceName,
+                alertId = alertId
+            )
+        }
+
         showNotification(
+            notificationId = if (alertId != null) {
+                SoarNotificationIds.newAlertNotificationId(alertId)
+            } else {
+                System.currentTimeMillis().toInt()
+            },
             title = message.notification?.title ?: data["title"] ?: "New SOAR alert",
             body = message.notification?.body ?: data["body"] ?: "Open SOAR to view alert details."
         )
@@ -81,7 +96,20 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
         message: RemoteMessage,
         data: Map<String, String>
     ) {
+        val responseRequestId = data["response_request_id"]?.toLongOrNull()
         val alertId = data["alert_id"]?.toLongOrNull()
+        val spaceName = data["space_name"].orEmpty()
+        if (
+            responseRequestId != null &&
+            alertId != null &&
+            spaceName.isNotBlank()
+        ) {
+            InAppNotificationCenter.recordApprovalRequest(
+                spaceName = spaceName,
+                alertId = alertId,
+                responseRequestId = responseRequestId
+            )
+        }
 
         if (
             alertId != null &&
@@ -98,6 +126,11 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         showNotification(
+            notificationId = if (responseRequestId != null) {
+                SoarNotificationIds.approvalRequestNotificationId(responseRequestId)
+            } else {
+                System.currentTimeMillis().toInt()
+            },
             title = message.notification?.title ?: data["title"] ?: "SOAR approval required",
             body = message.notification?.body
                 ?: data["body"]
@@ -106,6 +139,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun showNotification(
+        notificationId: Int,
         title: String,
         body: String
     ) {
@@ -134,7 +168,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
                     .bigText(body)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setVibrate(VIBRATION_PATTERN)
@@ -142,7 +176,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             .build()
 
         NotificationManagerCompat.from(this)
-            .notify(System.currentTimeMillis().toInt(), notification)
+            .notify(notificationId, notification)
     }
 
     private fun createNotificationChannel() {
@@ -168,7 +202,7 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             enableVibration(true)
             vibrationPattern = VIBRATION_PATTERN
             setSound(defaultSoundUri, audioAttributes)
-            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
 
         val notificationManager = getSystemService(

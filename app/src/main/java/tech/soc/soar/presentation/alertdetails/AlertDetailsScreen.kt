@@ -56,6 +56,11 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.offset
+import tech.soc.soar.presentation.components.NotificationBadge
+import tech.soc.soar.push.InAppNotificationCenter
 
 private const val RESPONSE_TARGET_TAG = "response_target"
 
@@ -65,6 +70,11 @@ fun AlertDetailsScreen(
     state: AlertDetailsUiState,
     onEvent: (AlertDetailsEvent) -> Unit
 ) {
+    val notificationState by InAppNotificationCenter.state.collectAsState()
+    val responsesBadgeCount = state.details?.let { details ->
+        notificationState.approvalCountForAlert(details.id)
+    } ?: 0
+
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = false,
@@ -115,6 +125,7 @@ fun AlertDetailsScreen(
                             .padding(16.dp)
                     ) {
                         AlertDetailsHeader(
+                            responsesBadgeCount = responsesBadgeCount,
                             onBackClick = {
                                 onEvent(AlertDetailsEvent.BackClicked)
                             },
@@ -219,6 +230,7 @@ fun AlertDetailsScreen(
 
 @Composable
 private fun AlertDetailsHeader(
+    responsesBadgeCount: Int,
     onBackClick: () -> Unit,
     onResponsesClick: () -> Unit
 ) {
@@ -240,13 +252,22 @@ private fun AlertDetailsHeader(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        TextButton(
-            onClick = onResponsesClick
-        ) {
-            Text(
-                text = "Responses",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
+        Box {
+            TextButton(
+                onClick = onResponsesClick
+            ) {
+                Text(
+                    text = "Responses",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            NotificationBadge(
+                count = responsesBadgeCount,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 4.dp, y = (-2).dp)
             )
         }
     }
