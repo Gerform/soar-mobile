@@ -1,5 +1,6 @@
 package tech.soc.soar.presentation.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,13 +32,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import tech.soc.soar.di.AppDependencies
 import tech.soc.soar.presentation.components.AppScreenScaffold
+import tech.soc.soar.presentation.push.PushPermissionRequester
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
+    accountUid: String?,
     onEvent: (HomeEvent) -> Unit
 ) {
+    if (!accountUid.isNullOrBlank()) {
+        PushPermissionRequester(
+            accountUid = accountUid,
+            registerMobilePushTokenUseCase = AppDependencies.registerMobilePushTokenUseCase,
+            isMobilePushEnabledForAccountUseCase = AppDependencies.isMobilePushEnabledForAccountUseCase,
+            markMobilePushEnabledForAccountUseCase = AppDependencies.markMobilePushEnabledForAccountUseCase
+        )
+    }
+
     AppScreenScaffold(
         isHomeClickable = true,
         showLogout = true,

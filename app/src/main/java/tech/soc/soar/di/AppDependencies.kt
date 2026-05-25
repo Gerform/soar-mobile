@@ -13,6 +13,9 @@ import tech.soc.soar.shared.data.auth.remote.AuthApi
 import tech.soc.soar.shared.data.auth.remote.AuthApiFactory
 import tech.soc.soar.shared.data.auth.repository.AuthRepositoryImpl
 import tech.soc.soar.shared.data.auth.repository.SessionRepositoryImpl
+import tech.soc.soar.shared.data.push.remote.MobilePushApi
+import tech.soc.soar.shared.data.push.remote.MobilePushApiFactory
+import tech.soc.soar.shared.data.push.repository.MobilePushRepositoryFactory
 import tech.soc.soar.shared.data.response.remote.ResponseApi
 import tech.soc.soar.shared.data.response.remote.ResponseApiFactory
 import tech.soc.soar.shared.data.response.repository.ResponseRepositoryFactory
@@ -34,6 +37,10 @@ import tech.soc.soar.shared.domain.auth.usecase.ConfirmTwoFactorUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LoginUseCase
 import tech.soc.soar.shared.domain.auth.usecase.LogoutUseCase
 import tech.soc.soar.shared.domain.auth.usecase.RefreshSessionUseCase
+import tech.soc.soar.shared.domain.push.repository.MobilePushRepository
+import tech.soc.soar.shared.domain.push.usecase.IsMobilePushEnabledForAccountUseCase
+import tech.soc.soar.shared.domain.push.usecase.MarkMobilePushEnabledForAccountUseCase
+import tech.soc.soar.shared.domain.push.usecase.RegisterMobilePushTokenUseCase
 import tech.soc.soar.shared.domain.response.repository.ResponseRepository
 import tech.soc.soar.shared.domain.response.usecase.CreateResponseActionUseCase
 import tech.soc.soar.shared.domain.response.usecase.DecideResponseRequestUseCase
@@ -184,6 +191,41 @@ object AppDependencies {
             responseRepository = responseRepository,
             checkSessionUseCase = checkSessionUseCase,
             refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val mobilePushApi: MobilePushApi by lazy {
+        MobilePushApiFactory.create(
+            apiConfig = ApiConfig(
+                baseUrl = ALERT_BASE_URL
+            ),
+            tokenProvider = tokenProvider
+        )
+    }
+
+    val mobilePushRepository: MobilePushRepository by lazy {
+        MobilePushRepositoryFactory.create(
+            context = appContext,
+            mobilePushApi = mobilePushApi
+        )
+    }
+
+    val registerMobilePushTokenUseCase: RegisterMobilePushTokenUseCase by lazy {
+        RegisterMobilePushTokenUseCase(
+            mobilePushRepository = mobilePushRepository,
+            refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val isMobilePushEnabledForAccountUseCase: IsMobilePushEnabledForAccountUseCase by lazy {
+        IsMobilePushEnabledForAccountUseCase(
+            mobilePushRepository = mobilePushRepository
+        )
+    }
+
+    val markMobilePushEnabledForAccountUseCase: MarkMobilePushEnabledForAccountUseCase by lazy {
+        MarkMobilePushEnabledForAccountUseCase(
+            mobilePushRepository = mobilePushRepository
         )
     }
 

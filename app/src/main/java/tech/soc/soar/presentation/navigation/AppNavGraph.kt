@@ -193,6 +193,7 @@ fun AppNavGraph(
 
                     HomeScreen(
                         state = homeState,
+                        accountUid = homeState.currentAccountUid,
                         onEvent = homeViewModel::onEvent
                     )
                 }

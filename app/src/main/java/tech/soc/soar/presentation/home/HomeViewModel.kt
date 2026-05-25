@@ -60,17 +60,23 @@ class HomeViewModel(
         viewModelScope.launch {
             val sessionState = checkSessionUseCase()
 
-            val roles = when (sessionState) {
-                is SessionState.Authenticated -> sessionState.session.roles
-                is SessionState.RequiresTwoFactor -> sessionState.session.roles
+            val session = when (sessionState) {
+                is SessionState.Authenticated -> sessionState.session
+                is SessionState.RequiresTwoFactor -> sessionState.session
                 SessionState.Loading,
-                SessionState.Unauthenticated -> emptyList()
+                SessionState.Unauthenticated -> null
             }
 
+            val roles = session?.roles ?: emptyList()
             val spaces = UserRoles.getSpaces(roles)
 
+            val accountUid = session?.user?.uid?.toString()
+
             _state.update {
-                it.copy(spaces = spaces)
+                it.copy(
+                    spaces = spaces,
+                    currentAccountUid = accountUid
+                )
             }
         }
     }

@@ -68,4 +68,5 @@ dependencies {
     implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.splashscreen)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 }
