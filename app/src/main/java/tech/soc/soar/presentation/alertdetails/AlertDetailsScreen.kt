@@ -1,6 +1,7 @@
 package tech.soc.soar.presentation.alertdetails
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.shared.domain.alert.model.AlertStatus
 import tech.soc.soar.shared.domain.response.model.ResponseTarget
+import tech.soc.soar.shared.domain.response.model.SuccessfulAction
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -174,6 +176,14 @@ fun AlertDetailsScreen(
                                 )
                             }
                         )
+
+                        if (state.successfulActions.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            SuccessfulActionsSection(
+                                actions = state.successfulActions
+                            )
+                        }
                     }
                 }
             }
@@ -566,5 +576,120 @@ private fun formatAlertDetailsDate(rawDate: String): String {
             .format(instant)
     } catch (exception: DateTimeParseException) {
         rawDate
+    }
+}
+
+@Composable
+private fun SuccessfulActionsSection(
+    actions: List<SuccessfulAction>
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Successful actions",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        actions.forEach { action ->
+            SuccessfulActionCard(
+                action = action,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SuccessfulActionCard(
+    action: SuccessfulAction,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .padding(14.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = action.actionName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Text(
+                    text = "success",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SuccessfulActionInfoLine(
+                label = "Target",
+                value = action.targetValue
+            )
+
+            SuccessfulActionInfoLine(
+                label = "Approved by",
+                value = action.approvedUser
+            )
+
+            SuccessfulActionInfoLine(
+                label = "Space",
+                value = action.spaceName
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = formatAlertDetailsDate(action.createdAt),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SuccessfulActionInfoLine(
+    label: String,
+    value: String
+) {
+    if (value.isBlank()) {
+        return
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp)
+    ) {
+        Text(
+            text = "$label: ",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

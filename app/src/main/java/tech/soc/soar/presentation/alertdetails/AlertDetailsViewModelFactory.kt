@@ -8,6 +8,7 @@ import tech.soc.soar.shared.domain.alert.usecase.UpdateAlertStatusUseCase
 import tech.soc.soar.shared.domain.alert.usecase.UpdateCachedAlertStatusUseCase
 import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
+import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
 
 class AlertDetailsViewModelFactory(
     private val alertId: Long,
@@ -17,7 +18,8 @@ class AlertDetailsViewModelFactory(
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
     private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
     private val checkSessionUseCase: CheckSessionUseCase,
-    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase
+    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase,
+    private val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -31,7 +33,8 @@ class AlertDetailsViewModelFactory(
                 updateAlertStatusUseCase = updateAlertStatusUseCase,
                 createBlockIpResponseUseCase = createBlockIpResponseUseCase,
                 checkSessionUseCase = checkSessionUseCase,
-                updateCachedAlertStatusUseCase = updateCachedAlertStatusUseCase
+                updateCachedAlertStatusUseCase = updateCachedAlertStatusUseCase,
+                getSuccessfulActionsUseCase = getSuccessfulActionsUseCase
             ) as T
         }
 

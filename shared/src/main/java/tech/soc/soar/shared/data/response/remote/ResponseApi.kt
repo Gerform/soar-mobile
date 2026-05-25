@@ -3,6 +3,7 @@ package tech.soc.soar.shared.data.response.remote
 import tech.soc.soar.shared.core.result.AppResult
 import tech.soc.soar.shared.data.response.dto.CreateResponseResultDto
 import tech.soc.soar.shared.data.response.dto.ResponseRequestsPageDto
+import tech.soc.soar.shared.data.response.dto.SuccessfulActionsPageDto
 
 interface ResponseApi {
 
@@ -23,4 +24,10 @@ interface ResponseApi {
         responseRequestId: Long,
         decision: String
     ): AppResult<CreateResponseResultDto>
+
+    suspend fun getSuccessfulActionsByAlertId(
+        alertId: Long,
+        skip: Int,
+        limit: Int
+    ): AppResult<SuccessfulActionsPageDto>
 }

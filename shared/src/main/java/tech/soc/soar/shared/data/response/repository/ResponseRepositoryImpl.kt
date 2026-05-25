@@ -8,6 +8,7 @@ import tech.soc.soar.shared.data.response.mapper.toEntity
 import tech.soc.soar.shared.data.response.remote.ResponseApi
 import tech.soc.soar.shared.domain.response.model.CreateResponseResult
 import tech.soc.soar.shared.domain.response.model.ResponseRequestsPage
+import tech.soc.soar.shared.domain.response.model.SuccessfulActionsPage
 import tech.soc.soar.shared.domain.response.repository.ResponseRepository
 import java.time.Instant
 
@@ -129,6 +130,65 @@ class ResponseRepositoryImpl(
 
             is AppResult.Error -> {
                 result
+            }
+        }
+    }
+
+    override suspend fun getSuccessfulActionsByAlertId(
+        alertId: Long,
+        page: Int,
+        pageSize: Int
+    ): AppResult<SuccessfulActionsPage> {
+        val skip = page * pageSize
+
+        return when (
+            val result = responseApi.getSuccessfulActionsByAlertId(
+                alertId = alertId,
+                skip = skip,
+                limit = pageSize
+            )
+        ) {
+            is AppResult.Success -> {
+                val pageDto = result.data
+
+                responseDao.upsertSuccessfulActions(
+                    pageDto.successfulActions.map { it.toEntity() }
+                )
+
+                AppResult.Success(
+                    pageDto.toDomain(fromCache = false)
+                )
+            }
+
+            is AppResult.Error -> {
+                if (
+                    result.error is AppError.Unauthorized ||
+                    result.error is AppError.Forbidden
+                ) {
+                    return result
+                }
+
+                val cachedActions = responseDao.getSuccessfulActionsByAlertId(
+                    alertId = alertId,
+                    skip = skip,
+                    limit = pageSize
+                )
+
+                if (cachedActions.isNotEmpty()) {
+                    val total = responseDao.countSuccessfulActionsByAlertId(alertId)
+
+                    AppResult.Success(
+                        SuccessfulActionsPage(
+                            total = total,
+                            skip = skip,
+                            limit = pageSize,
+                            successfulActions = cachedActions.map { it.toDomain() },
+                            fromCache = true
+                        )
+                    )
+                } else {
+                    AppResult.Error(result.error)
+                }
             }
         }
     }

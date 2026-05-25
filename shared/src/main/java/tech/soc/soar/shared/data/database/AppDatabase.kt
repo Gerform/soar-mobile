@@ -10,6 +10,7 @@ import tech.soc.soar.shared.data.alert.local.AlertEntity
 import tech.soc.soar.shared.data.alert.local.AlertViewEntity
 import tech.soc.soar.shared.data.response.local.ResponseDao
 import tech.soc.soar.shared.data.response.local.ResponseRequestEntity
+import tech.soc.soar.shared.data.response.local.SuccessfulActionEntity
 
 @Database(
     entities = [
@@ -17,9 +18,10 @@ import tech.soc.soar.shared.data.response.local.ResponseRequestEntity
         AlertEntity::class,
         AlertViewEntity::class,
         AlertDetailsEntity::class,
-        ResponseRequestEntity::class
+        ResponseRequestEntity::class,
+        SuccessfulActionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

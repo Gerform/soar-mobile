@@ -54,4 +54,35 @@ interface ResponseDao {
         updatedAt: String,
         cachedAt: Long
     )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSuccessfulActions(
+        actions: List<SuccessfulActionEntity>
+    )
+
+    @Query(
+        """
+    SELECT *
+    FROM successful_actions
+    WHERE alert_id = :alertId
+    ORDER BY created_at DESC
+    LIMIT :limit OFFSET :skip
+    """
+    )
+    suspend fun getSuccessfulActionsByAlertId(
+        alertId: Long,
+        skip: Int,
+        limit: Int
+    ): List<SuccessfulActionEntity>
+
+    @Query(
+        """
+    SELECT COUNT(*)
+    FROM successful_actions
+    WHERE alert_id = :alertId
+    """
+    )
+    suspend fun countSuccessfulActionsByAlertId(
+        alertId: Long
+    ): Int
 }

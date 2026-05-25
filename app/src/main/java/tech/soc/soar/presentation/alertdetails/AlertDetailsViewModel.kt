@@ -20,6 +20,7 @@ import tech.soc.soar.shared.domain.auth.usecase.CheckSessionUseCase
 import tech.soc.soar.shared.domain.response.model.ResponsePermissions
 import tech.soc.soar.shared.domain.response.model.ResponseTargetType
 import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
+import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
 
 class AlertDetailsViewModel(
     private val alertId: Long,
@@ -29,7 +30,8 @@ class AlertDetailsViewModel(
     private val updateAlertStatusUseCase: UpdateAlertStatusUseCase,
     private val createBlockIpResponseUseCase: CreateBlockIpResponseUseCase,
     private val checkSessionUseCase: CheckSessionUseCase,
-    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase
+    private val updateCachedAlertStatusUseCase: UpdateCachedAlertStatusUseCase,
+    private val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AlertDetailsUiState())
@@ -40,6 +42,7 @@ class AlertDetailsViewModel(
 
     init {
         loadDetails(isRefresh = false)
+        loadSuccessfulActions()
         loadResponsePermissions()
     }
 
@@ -66,6 +69,7 @@ class AlertDetailsViewModel(
             AlertDetailsEvent.RefreshTriggered -> {
                 if (!state.value.isLoading && !state.value.isRefreshing && !state.value.isUpdatingStatus && !state.value.isCreatingResponse) {
                     loadDetails(isRefresh = true)
+                    loadSuccessfulActions()
                     loadResponsePermissions()
                 }
             }
@@ -274,5 +278,33 @@ class AlertDetailsViewModel(
                 }
             }
         }
+    }
+
+    private fun loadSuccessfulActions() {
+        viewModelScope.launch {
+            when (
+                val result = getSuccessfulActionsUseCase(
+                    alertId = alertId,
+                    page = 0,
+                    pageSize = SUCCESSFUL_ACTIONS_PAGE_SIZE
+                )
+            ) {
+                is AppResult.Success -> {
+                    _state.update {
+                        it.copy(
+                            successfulActions = result.data.successfulActions
+                        )
+                    }
+                }
+
+                is AppResult.Error -> {
+
+                }
+            }
+        }
+    }
+
+    private companion object {
+        const val SUCCESSFUL_ACTIONS_PAGE_SIZE = 50
     }
 }

@@ -23,6 +23,7 @@ import tech.soc.soar.shared.data.response.dto.CreateBlockIpResponseRequestDto
 import tech.soc.soar.shared.data.response.dto.CreateResponseResultDto
 import tech.soc.soar.shared.data.response.dto.DecideResponseRequestDto
 import tech.soc.soar.shared.data.response.dto.ResponseRequestsPageDto
+import tech.soc.soar.shared.data.response.dto.SuccessfulActionsPageDto
 import java.io.IOException
 
 class KtorResponseApi(
@@ -194,6 +195,59 @@ class KtorResponseApi(
             )
         } catch (exception: Exception) {
             Log.e("KtorResponseApi", "Unexpected decide response request error", exception)
+
+            AppResult.Error(
+                AppError.Api(
+                    message = exception.message ?: "Unexpected error"
+                )
+            )
+        }
+    }
+
+    override suspend fun getSuccessfulActionsByAlertId(
+        alertId: Long,
+        skip: Int,
+        limit: Int
+    ): AppResult<SuccessfulActionsPageDto> {
+        return try {
+            val response = client.get(buildUrl("/responses/$alertId/successful-actions")) {
+                val accessToken = tokenProvider.getAccessToken()
+
+                if (!accessToken.isNullOrBlank()) {
+                    bearerAuth(accessToken)
+                }
+
+                parameter("skip", skip)
+                parameter("limit", limit)
+            }
+
+            if (response.status.value in SUCCESS_STATUS_RANGE) {
+                AppResult.Success(response.body())
+            } else {
+                AppResult.Error(ApiErrorMapper.map(response))
+            }
+        } catch (exception: ClientRequestException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: ServerResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: RedirectResponseException) {
+            AppResult.Error(ApiErrorMapper.map(exception.response))
+        } catch (exception: IOException) {
+            AppResult.Error(
+                AppError.Network(
+                    message = "Failed to connect to server"
+                )
+            )
+        } catch (exception: SerializationException) {
+            Log.e("KtorResponseApi", "Failed to parse successful actions", exception)
+
+            AppResult.Error(
+                AppError.Api(
+                    message = "Failed to parse server response"
+                )
+            )
+        } catch (exception: Exception) {
+            Log.e("KtorResponseApi", "Unexpected successful actions error", exception)
 
             AppResult.Error(
                 AppError.Api(

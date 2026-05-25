@@ -38,6 +38,7 @@ import tech.soc.soar.shared.domain.response.repository.ResponseRepository
 import tech.soc.soar.shared.domain.response.usecase.CreateBlockIpResponseUseCase
 import tech.soc.soar.shared.domain.response.usecase.DecideResponseRequestUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetResponseRequestsUseCase
+import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
 
 object AppDependencies {
 
@@ -175,6 +176,13 @@ object AppDependencies {
         DecideResponseRequestUseCase(
             responseRepository = responseRepository,
             checkSessionUseCase = checkSessionUseCase,
+            refreshSessionUseCase = refreshSessionUseCase
+        )
+    }
+
+    val getSuccessfulActionsUseCase: GetSuccessfulActionsUseCase by lazy {
+        GetSuccessfulActionsUseCase(
+            responseRepository = responseRepository,
             refreshSessionUseCase = refreshSessionUseCase
         )
     }
