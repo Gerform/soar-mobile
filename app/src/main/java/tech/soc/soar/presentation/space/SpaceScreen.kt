@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,11 +46,11 @@ import kotlinx.coroutines.launch
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.presentation.components.NotificationBadge
 import tech.soc.soar.push.InAppNotificationCenter
-import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 import tech.soc.soar.push.PushEvent
 import tech.soc.soar.push.PushEventBus
 import tech.soc.soar.push.PushForegroundState
 import tech.soc.soar.push.SoarNotificationIds
+import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 import tech.soc.soar.shared.domain.alert.model.AlertItem
 import tech.soc.soar.shared.domain.alert.model.AlertStatus
 import java.time.Instant
@@ -143,34 +144,6 @@ fun SpaceScreen(
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Text(
-                text = spaceName,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-            )
-
-            if (state.fromCache) {
-                Text(
-                    text = "Offline data",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            if (state.error != null && state.alerts.isNotEmpty()) {
-                Text(
-                    text = state.error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = {
@@ -181,11 +154,21 @@ fun SpaceScreen(
                 when {
                     state.isLoading && state.alerts.isEmpty() -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 120.dp),
+                            contentPadding = PaddingValues(top = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             item {
+                                SpaceHeader(
+                                    spaceName = spaceName,
+                                    fromCache = state.fromCache,
+                                    error = null
+                                )
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(96.dp))
                                 CircularProgressIndicator()
                             }
                         }
@@ -193,15 +176,27 @@ fun SpaceScreen(
 
                     state.error != null && state.alerts.isEmpty() -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 120.dp),
+                            contentPadding = PaddingValues(top = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             item {
+                                SpaceHeader(
+                                    spaceName = spaceName,
+                                    fromCache = state.fromCache,
+                                    error = null
+                                )
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(96.dp))
+
                                 Text(
                                     text = state.error,
                                     color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -209,11 +204,22 @@ fun SpaceScreen(
 
                     state.alerts.isEmpty() -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 120.dp),
+                            contentPadding = PaddingValues(top = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             item {
+                                SpaceHeader(
+                                    spaceName = spaceName,
+                                    fromCache = state.fromCache,
+                                    error = null
+                                )
+                            }
+
+                            item {
+                                Spacer(modifier = Modifier.height(96.dp))
+
                                 Text(
                                     text = "No alerts",
                                     color = MaterialTheme.colorScheme.onBackground
@@ -226,8 +232,17 @@ fun SpaceScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            item {
+                                SpaceHeader(
+                                    spaceName = spaceName,
+                                    fromCache = state.fromCache,
+                                    error = state.error
+                                )
+                            }
+
                             items(
                                 items = state.alerts,
                                 key = { alert -> alert.id }
@@ -296,6 +311,41 @@ fun SpaceScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SpaceHeader(
+    spaceName: String,
+    fromCache: Boolean,
+    error: String?
+) {
+    Text(
+        text = spaceName,
+        style = MaterialTheme.typography.headlineMedium,
+        color = MaterialTheme.colorScheme.onBackground,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    )
+
+    if (fromCache) {
+        Text(
+            text = "Offline data",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+    }
+
+    if (error != null) {
+        Text(
+            text = error,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
     }
 }
 
