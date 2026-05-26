@@ -7,6 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +49,7 @@ import tech.soc.soar.presentation.space.SpaceEvent
 import tech.soc.soar.presentation.space.SpaceScreen
 import tech.soc.soar.presentation.space.SpaceViewModel
 import tech.soc.soar.presentation.space.SpaceViewModelFactory
+import tech.soc.soar.shared.domain.auth.model.SessionState
 
 private const val UPDATED_ALERT_STATUS_KEY = "updated_alert_status"
 
@@ -55,6 +59,37 @@ fun AppNavGraph(
 ) {
     val rootState by rootViewModel.state.collectAsState()
     val navController = rememberNavController()
+
+    var currentAccountUid by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    LaunchedEffect(rootState) {
+        currentAccountUid = when (rootState) {
+            RootUiState.Authenticated,
+            RootUiState.RequiresTwoFactor -> {
+                when (val sessionState = AppDependencies.checkSessionUseCase()) {
+                    is SessionState.Authenticated -> {
+                        sessionState.session.user?.uid.toString()
+                    }
+
+                    is SessionState.RequiresTwoFactor -> {
+                        sessionState.session.user?.uid.toString()
+                    }
+
+                    SessionState.Loading,
+                    SessionState.Unauthenticated -> {
+                        null
+                    }
+                }
+            }
+
+            RootUiState.Unauthenticated,
+            RootUiState.Loading -> {
+                null
+            }
+        }
+    }
 
     when (rootState) {
         RootUiState.Loading -> {
@@ -158,6 +193,12 @@ fun AppNavGraph(
 
                     val homeState by homeViewModel.state.collectAsState()
 
+                    LaunchedEffect(homeState.currentAccountUid) {
+                        if (!homeState.currentAccountUid.isNullOrBlank()) {
+                            currentAccountUid = homeState.currentAccountUid
+                        }
+                    }
+
                     LaunchedEffect(Unit) {
                         homeViewModel.effect.collect { effect ->
                             when (effect) {
@@ -175,6 +216,8 @@ fun AppNavGraph(
                                 }
 
                                 HomeEffect.NavigateToLogin -> {
+                                    currentAccountUid = null
+
                                     rootViewModel.onLoggedOut()
 
                                     navController.navigate(AppRoutes.LOGIN) {
@@ -280,6 +323,8 @@ fun AppNavGraph(
                                 }
 
                                 SpaceEffect.NavigateToLogin -> {
+                                    currentAccountUid = null
+
                                     rootViewModel.onLoggedOut()
 
                                     navController.navigate(AppRoutes.LOGIN) {
@@ -303,6 +348,7 @@ fun AppNavGraph(
 
                     SpaceScreen(
                         spaceName = spaceName,
+                        accountUid = currentAccountUid,
                         state = spaceState,
                         onEvent = spaceViewModel::onEvent
                     )
@@ -458,6 +504,7 @@ fun AppNavGraph(
 
                     ResponsesScreen(
                         alertId = alertId,
+                        accountUid = currentAccountUid,
                         state = responsesState,
                         onEvent = responsesViewModel::onEvent
                     )

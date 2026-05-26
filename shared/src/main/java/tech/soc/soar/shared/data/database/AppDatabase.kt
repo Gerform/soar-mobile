@@ -8,6 +8,8 @@ import tech.soc.soar.shared.data.alert.local.AlertDao
 import tech.soc.soar.shared.data.alert.local.AlertDetailsEntity
 import tech.soc.soar.shared.data.alert.local.AlertEntity
 import tech.soc.soar.shared.data.alert.local.AlertViewEntity
+import tech.soc.soar.shared.data.push.local.InAppNotificationDao
+import tech.soc.soar.shared.data.push.local.InAppNotificationEntity
 import tech.soc.soar.shared.data.push.local.MobilePushPermissionDao
 import tech.soc.soar.shared.data.push.local.MobilePushPermissionEntity
 import tech.soc.soar.shared.data.response.local.ResponseDao
@@ -22,9 +24,10 @@ import tech.soc.soar.shared.data.response.local.SuccessfulActionEntity
         AlertDetailsEntity::class,
         ResponseRequestEntity::class,
         SuccessfulActionEntity::class,
-        MobilePushPermissionEntity::class
+        MobilePushPermissionEntity::class,
+        InAppNotificationEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,4 +39,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun responseDao(): ResponseDao
 
     abstract fun mobilePushPermissionDao(): MobilePushPermissionDao
+
+    abstract fun inAppNotificationDao(): InAppNotificationDao
 }

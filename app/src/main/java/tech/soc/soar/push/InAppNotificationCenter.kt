@@ -3,6 +3,7 @@ package tech.soc.soar.push
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import tech.soc.soar.shared.data.push.local.InAppNotificationEntity
 
 data class InAppNotificationState(
     val newAlertIdsBySpace: Map<String, Set<Long>> = emptyMap(),
@@ -16,6 +17,10 @@ data class InAppNotificationState(
         val approvalCount = approvalRequestIdsBySpace[normalizedSpace]?.size ?: 0
 
         return alertCount + approvalCount
+    }
+
+    fun hasNotificationsForSpace(spaceName: String): Boolean {
+        return badgeCountForSpace(spaceName) > 0
     }
 
     fun hasNewAlert(alertId: Long): Boolean {
@@ -37,16 +42,51 @@ data class InAppNotificationState(
     fun approvalRequestIdsForAlert(alertId: Long): Set<Long> {
         return approvalRequestIdsByAlert[alertId].orEmpty()
     }
-
-    fun hasNotificationsForSpace(spaceName: String): Boolean {
-        return badgeCountForSpace(spaceName) > 0
-    }
 }
 
 object InAppNotificationCenter {
 
+    const val TYPE_NEW_ALERT = "new_alert"
+    const val TYPE_APPROVAL_REQUEST = "approval_request"
+
     private val _state = MutableStateFlow(InAppNotificationState())
     val state = _state.asStateFlow()
+
+    fun restoreFromEntities(
+        entities: List<InAppNotificationEntity>
+    ) {
+        val newAlerts = mutableMapOf<String, Set<Long>>()
+        val approvalBySpace = mutableMapOf<String, Set<Long>>()
+        val approvalByAlert = mutableMapOf<Long, Set<Long>>()
+
+        entities.forEach { entity ->
+            val normalizedSpace = entity.spaceName.normalizeSpaceName()
+
+            when (entity.type) {
+                TYPE_NEW_ALERT -> {
+                    val current = newAlerts[normalizedSpace].orEmpty()
+                    newAlerts[normalizedSpace] = current + entity.alertId
+                }
+
+                TYPE_APPROVAL_REQUEST -> {
+                    val responseRequestId = entity.responseRequestId
+                        ?: return@forEach
+
+                    val currentSpace = approvalBySpace[normalizedSpace].orEmpty()
+                    approvalBySpace[normalizedSpace] = currentSpace + responseRequestId
+
+                    val currentAlert = approvalByAlert[entity.alertId].orEmpty()
+                    approvalByAlert[entity.alertId] = currentAlert + responseRequestId
+                }
+            }
+        }
+
+        _state.value = InAppNotificationState(
+            newAlertIdsBySpace = newAlerts,
+            approvalRequestIdsBySpace = approvalBySpace,
+            approvalRequestIdsByAlert = approvalByAlert
+        )
+    }
 
     fun recordNewAlert(
         spaceName: String,
@@ -73,7 +113,7 @@ object InAppNotificationCenter {
 
         _state.update { currentState ->
             val currentSpaceIds = currentState.approvalRequestIdsBySpace[normalizedSpace].orEmpty()
-            val currentAlertIds = currentState.apvalRequestIdsByAlertCompat(alertId)
+            val currentAlertIds = currentState.approvalRequestIdsByAlert[alertId].orEmpty()
 
             currentState.copy(
                 approvalRequestIdsBySpace = currentState.approvalRequestIdsBySpace +
@@ -115,12 +155,6 @@ object InAppNotificationCenter {
 
     fun approvalRequestIdsForAlert(alertId: Long): Set<Long> {
         return state.value.approvalRequestIdsForAlert(alertId)
-    }
-
-    private fun InAppNotificationState.apvalRequestIdsByAlertCompat(
-        alertId: Long
-    ): Set<Long> {
-        return approvalRequestIdsByAlert[alertId].orEmpty()
     }
 }
 

@@ -14,7 +14,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import tech.soc.soar.R
+import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 
 class SoarFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -31,14 +35,12 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
         when (type) {
             TYPE_NEW_ALERT -> {
                 handleNewAlertMessage(
-                    message = message,
                     data = data
                 )
             }
 
             TYPE_APPROVAL_REQUEST -> {
                 handleApprovalRequestMessage(
-                    message = message,
                     data = data
                 )
             }
@@ -46,31 +48,32 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             else -> {
                 showNotification(
                     notificationId = System.currentTimeMillis().toInt(),
-                    title = message.notification?.title ?: DEFAULT_TITLE,
-                    body = message.notification?.body ?: DEFAULT_BODY
+                    title = data["title"] ?: DEFAULT_TITLE,
+                    body = data["body"] ?: DEFAULT_BODY
                 )
             }
         }
     }
 
     private fun handleNewAlertMessage(
-        message: RemoteMessage,
         data: Map<String, String>
     ) {
+        val accountUid = data["account_uid"].orEmpty()
         val alertId = data["alert_id"]?.toLongOrNull()
         val spaceName = data["space_name"].orEmpty()
+        val eventId = data["event_id"] ?: "new_alert:$alertId"
+
+        recordNewAlertMarker(
+            accountUid = accountUid,
+            eventId = eventId,
+            spaceName = spaceName,
+            alertId = alertId
+        )
 
         if (
             spaceName.isNotBlank() &&
             PushForegroundState.isSpaceOpened(spaceName)
         ) {
-            if (alertId != null) {
-                InAppNotificationCenter.recordNewAlert(
-                    spaceName = spaceName,
-                    alertId = alertId
-                )
-            }
-
             PushEventBus.emit(
                 PushEvent.SpaceShouldRefresh(
                     spaceName = spaceName,
@@ -81,42 +84,33 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        if (alertId != null && spaceName.isNotBlank()) {
-            InAppNotificationCenter.recordNewAlert(
-                spaceName = spaceName,
-                alertId = alertId
-            )
-        }
-
         showNotification(
             notificationId = if (alertId != null) {
                 SoarNotificationIds.newAlertNotificationId(alertId)
             } else {
                 System.currentTimeMillis().toInt()
             },
-            title = message.notification?.title ?: data["title"] ?: "New SOAR alert",
-            body = message.notification?.body ?: data["body"] ?: "Open SOAR to view alert details."
+            title = data["title"] ?: "New SOAR alert",
+            body = data["body"] ?: "Open SOAR to view alert details."
         )
     }
 
     private fun handleApprovalRequestMessage(
-        message: RemoteMessage,
         data: Map<String, String>
     ) {
+        val accountUid = data["account_uid"].orEmpty()
         val responseRequestId = data["response_request_id"]?.toLongOrNull()
         val alertId = data["alert_id"]?.toLongOrNull()
         val spaceName = data["space_name"].orEmpty()
-        if (
-            responseRequestId != null &&
-            alertId != null &&
-            spaceName.isNotBlank()
-        ) {
-            InAppNotificationCenter.recordApprovalRequest(
-                spaceName = spaceName,
-                alertId = alertId,
-                responseRequestId = responseRequestId
-            )
-        }
+        val eventId = data["event_id"] ?: "approval_request:$responseRequestId"
+
+        recordApprovalRequestMarker(
+            accountUid = accountUid,
+            eventId = eventId,
+            spaceName = spaceName,
+            alertId = alertId,
+            responseRequestId = responseRequestId
+        )
 
         if (
             alertId != null &&
@@ -138,11 +132,75 @@ class SoarFirebaseMessagingService : FirebaseMessagingService() {
             } else {
                 System.currentTimeMillis().toInt()
             },
-            title = message.notification?.title ?: data["title"] ?: "SOAR approval required",
-            body = message.notification?.body
-                ?: data["body"]
-                ?: "A new active response request requires your approval."
+            title = data["title"] ?: "SOAR approval required",
+            body = data["body"] ?: "A new active response request requires your approval."
         )
+    }
+
+    private fun recordNewAlertMarker(
+        accountUid: String,
+        eventId: String,
+        spaceName: String,
+        alertId: Long?
+    ) {
+        if (
+            accountUid.isBlank() ||
+            eventId.isBlank() ||
+            spaceName.isBlank() ||
+            alertId == null
+        ) {
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            InAppNotificationStorage.recordNewAlert(
+                context = applicationContext,
+                accountUid = accountUid,
+                eventId = eventId,
+                spaceName = spaceName,
+                alertId = alertId
+            )
+
+            InAppNotificationCenter.recordNewAlert(
+                spaceName = spaceName,
+                alertId = alertId
+            )
+        }
+    }
+
+    private fun recordApprovalRequestMarker(
+        accountUid: String,
+        eventId: String,
+        spaceName: String,
+        alertId: Long?,
+        responseRequestId: Long?
+    ) {
+        if (
+            accountUid.isBlank() ||
+            eventId.isBlank() ||
+            spaceName.isBlank() ||
+            alertId == null ||
+            responseRequestId == null
+        ) {
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            InAppNotificationStorage.recordApprovalRequest(
+                context = applicationContext,
+                accountUid = accountUid,
+                eventId = eventId,
+                spaceName = spaceName,
+                alertId = alertId,
+                responseRequestId = responseRequestId
+            )
+
+            InAppNotificationCenter.recordApprovalRequest(
+                spaceName = spaceName,
+                alertId = alertId,
+                responseRequestId = responseRequestId
+            )
+        }
     }
 
     private fun showNotification(

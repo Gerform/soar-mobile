@@ -53,6 +53,7 @@ import tech.soc.soar.push.PushEvent
 import tech.soc.soar.push.PushEventBus
 import tech.soc.soar.push.PushForegroundState
 import tech.soc.soar.push.SoarNotificationIds
+import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 import tech.soc.soar.shared.domain.response.model.ResponseDecision
 import tech.soc.soar.shared.domain.response.model.ResponseRequest
 import tech.soc.soar.shared.domain.response.model.ResponseRequestStatus
@@ -65,6 +66,7 @@ import java.time.format.DateTimeParseException
 @Composable
 fun ResponsesScreen(
     alertId: Long,
+    accountUid: String?,
     state: ResponsesUiState,
     onEvent: (ResponsesEvent) -> Unit
 ) {
@@ -84,13 +86,18 @@ fun ResponsesScreen(
         }
     }
 
-    LaunchedEffect(alertId) {
+    LaunchedEffect(alertId, accountUid) {
         val responseIds = InAppNotificationCenter.approvalRequestIdsForAlert(alertId)
 
         if (responseIds.isNotEmpty()) {
             temporarilyHighlightedResponseIds = responseIds
 
-            val removedIds = InAppNotificationCenter.clearApprovalRequestsForAlert(alertId)
+            val removedIds = clearApprovalMarkers(
+                context = context,
+                accountUid = accountUid,
+                alertId = alertId
+            )
+
             val notificationManager = NotificationManagerCompat.from(context)
 
             removedIds.forEach { responseRequestId ->
@@ -105,7 +112,7 @@ fun ResponsesScreen(
         }
     }
 
-    LaunchedEffect(alertId) {
+    LaunchedEffect(alertId, accountUid) {
         PushEventBus.events.collect { event ->
             when (event) {
                 is PushEvent.ResponsesShouldRefresh -> {
@@ -115,7 +122,12 @@ fun ResponsesScreen(
                         if (responseIds.isNotEmpty()) {
                             temporarilyHighlightedResponseIds = responseIds
 
-                            val removedIds = InAppNotificationCenter.clearApprovalRequestsForAlert(alertId)
+                            val removedIds = clearApprovalMarkers(
+                                context = context,
+                                accountUid = accountUid,
+                                alertId = alertId
+                            )
+
                             val notificationManager = NotificationManagerCompat.from(context)
 
                             removedIds.forEach { responseRequestId ->
@@ -304,6 +316,37 @@ fun ResponsesScreen(
     }
 }
 
+private suspend fun clearApprovalMarkers(
+    context: android.content.Context,
+    accountUid: String?,
+    alertId: Long
+): Set<Long> {
+    val liveIds = InAppNotificationCenter.approvalRequestIdsForAlert(alertId)
+
+    val databaseIds = if (!accountUid.isNullOrBlank()) {
+        InAppNotificationStorage.getApprovalResponseIdsForAlert(
+            context = context,
+            accountUid = accountUid,
+            alertId = alertId
+        )
+    } else {
+        emptySet()
+    }
+
+    val idsToCancel = liveIds + databaseIds
+
+    if (!accountUid.isNullOrBlank()) {
+        InAppNotificationStorage.clearApprovalRequestsForAlert(
+            context = context,
+            accountUid = accountUid,
+            alertId = alertId
+        )
+    }
+
+    InAppNotificationCenter.clearApprovalRequestsForAlert(alertId)
+
+    return idsToCancel
+}
 @Composable
 private fun ResponsesHeader(
     onBackClick: () -> Unit

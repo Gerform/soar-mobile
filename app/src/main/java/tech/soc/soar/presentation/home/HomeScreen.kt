@@ -1,6 +1,5 @@
 package tech.soc.soar.presentation.home
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -32,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +41,7 @@ import tech.soc.soar.presentation.components.NotificationBadge
 import tech.soc.soar.presentation.push.PushPermissionRequester
 import tech.soc.soar.push.InAppNotificationCenter
 import tech.soc.soar.push.InAppNotificationState
+import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 
 @Composable
 fun HomeScreen(
@@ -48,6 +49,20 @@ fun HomeScreen(
     accountUid: String?,
     onEvent: (HomeEvent) -> Unit
 ) {
+    val context = LocalContext.current
+    val notificationState by InAppNotificationCenter.state.collectAsState()
+
+    LaunchedEffect(accountUid) {
+        if (!accountUid.isNullOrBlank()) {
+            val entities = InAppNotificationStorage.getByAccountUid(
+                context = context,
+                accountUid = accountUid
+            )
+
+            InAppNotificationCenter.restoreFromEntities(entities)
+        }
+    }
+
     if (!accountUid.isNullOrBlank()) {
         PushPermissionRequester(
             accountUid = accountUid,
@@ -56,8 +71,6 @@ fun HomeScreen(
             markMobilePushEnabledForAccountUseCase = AppDependencies.markMobilePushEnabledForAccountUseCase
         )
     }
-    val notificationState by InAppNotificationCenter.state.collectAsState()
-
 
     AppScreenScaffold(
         isHomeClickable = true,
@@ -193,7 +206,7 @@ private fun SpacesGrid(
             itemsIndexed(spaces) { index, space ->
                 SpaceCircleButton(
                     spaceName = space,
-                    badgeCount = notificationState.badgeCountForSpace(spaces.first()),
+                    badgeCount = notificationState.badgeCountForSpace(space),
                     gradient = spaceGradient(index),
                     modifier = Modifier
                         .fillMaxWidth()

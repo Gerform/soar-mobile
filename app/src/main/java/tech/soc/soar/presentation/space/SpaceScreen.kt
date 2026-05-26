@@ -28,21 +28,24 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import kotlinx.coroutines.launch
 import tech.soc.soar.presentation.components.AppScreenScaffold
 import tech.soc.soar.presentation.components.NotificationBadge
 import tech.soc.soar.push.InAppNotificationCenter
+import tech.soc.soar.shared.data.push.local.InAppNotificationStorage
 import tech.soc.soar.push.PushEvent
 import tech.soc.soar.push.PushEventBus
 import tech.soc.soar.push.PushForegroundState
@@ -58,11 +61,13 @@ import java.time.format.DateTimeParseException
 @Composable
 fun SpaceScreen(
     spaceName: String,
+    accountUid: String?,
     state: SpaceUiState,
     onEvent: (SpaceEvent) -> Unit
 ) {
     val listState = rememberLazyListState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val notificationState by InAppNotificationCenter.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -242,7 +247,19 @@ fun SpaceScreen(
                                     forceHighlight = hasNewAlertNotification || approvalCount > 0,
                                     onClick = {
                                         if (hasNewAlertNotification) {
-                                            InAppNotificationCenter.clearNewAlert(alert.id)
+                                            if (!accountUid.isNullOrBlank()) {
+                                                coroutineScope.launch {
+                                                    InAppNotificationStorage.clearNewAlert(
+                                                        context = context,
+                                                        accountUid = accountUid,
+                                                        alertId = alert.id
+                                                    )
+
+                                                    InAppNotificationCenter.clearNewAlert(alert.id)
+                                                }
+                                            } else {
+                                                InAppNotificationCenter.clearNewAlert(alert.id)
+                                            }
 
                                             NotificationManagerCompat.from(context)
                                                 .cancel(
