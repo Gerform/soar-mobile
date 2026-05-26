@@ -173,6 +173,16 @@ fun AppNavGraph(
                                         }
                                     }
                                 }
+
+                                TwoFactorEffect.NavigateToLogin -> {
+                                    rootViewModel.onLoggedOut()
+
+                                    navController.navigate(AppRoutes.LOGIN) {
+                                        popUpTo(0) {
+                                            inclusive = true
+                                        }
+                                    }
+                                }
                             }
                         }
                     }

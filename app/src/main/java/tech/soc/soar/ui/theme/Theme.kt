@@ -41,7 +41,7 @@ private val LightColorScheme = lightColorScheme(
 
 private val DarkColorScheme = darkColorScheme(
     primary = BluePrimaryDarkTheme,
-    onPrimary = Color.Black,
+    onPrimary = Color.White,
 
     primaryContainer = BlueTopBarDark,
     onPrimaryContainer = Color.White,

@@ -1,7 +1,10 @@
 package tech.soc.soar.presentation.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -228,6 +231,26 @@ private fun SpaceCircleButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val isDarkTheme = isSystemInDarkTheme()
+
+    val glassOverlay = if (isDarkTheme) {
+        Color.Black.copy(alpha = 0.36f)
+    } else {
+        Color.White.copy(alpha = 0.34f)
+    }
+
+    val glassHighlight = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.10f)
+    } else {
+        Color.White.copy(alpha = 0.42f)
+    }
+
+    val borderColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.24f)
+    } else {
+        Color.White.copy(alpha = 0.65f)
+    }
+
     Box(
         modifier = modifier
     ) {
@@ -236,16 +259,43 @@ private fun SpaceCircleButton(
                 .matchParentSize()
                 .clip(CircleShape)
                 .background(gradient)
-                .clickable(onClick = onClick)
-                .padding(16.dp),
+                .background(glassOverlay)
+                .border(
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = borderColor
+                    ),
+                    shape = CircleShape
+                )
+                .clickable(onClick = onClick),
             contentAlignment = Alignment.Center
         ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                glassHighlight,
+                                Color.Transparent
+                            ),
+                            center = androidx.compose.ui.geometry.Offset(
+                                x = 70f,
+                                y = 45f
+                            ),
+                            radius = 180f
+                        )
+                    )
+            )
+
             Text(
                 text = spaceName,
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(16.dp)
             )
         }
 

@@ -7,4 +7,6 @@ sealed interface TwoFactorEvent {
     ) : TwoFactorEvent
 
     data object Submit : TwoFactorEvent
+
+    data object BackClicked : TwoFactorEvent
 }

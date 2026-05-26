@@ -25,4 +25,4 @@ val DarkOutline = Color(0xFF9CA3AF)
 
 val ErrorRed = Color(0xFFB3261E)
 
-val BluePrimaryDarkTheme = Color(0xFF3B82F6)
+val BluePrimaryDarkTheme = Color(0xFF0D47A1)

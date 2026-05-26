@@ -38,6 +38,12 @@ class TwoFactorViewModel(
             TwoFactorEvent.Submit -> {
                 confirmCode()
             }
+
+            TwoFactorEvent.BackClicked -> {
+                viewModelScope.launch {
+                    _effect.send(TwoFactorEffect.NavigateToLogin)
+                }
+            }
         }
     }
 
