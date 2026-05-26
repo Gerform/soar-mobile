@@ -1,9 +1,29 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp) apply false
     id("com.google.gms.google-services")
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { inputStream ->
+        localProperties.load(inputStream)
+    }
+}
+
+fun localProperty(
+    name: String,
+    defaultValue: String
+): String {
+    return localProperties.getProperty(name)
+        ?: providers.gradleProperty(name).orNull
+        ?: defaultValue
 }
 
 android {
@@ -20,6 +40,18 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "AUTH_BASE_URL",
+            "\"${localProperty("AUTH_BASE_URL", "http://192.168.0.244:8000")}\""
+        )
+
+        buildConfigField(
+            "String",
+            "ALERT_BASE_URL",
+            "\"${localProperty("ALERT_BASE_URL", "http://192.168.0.244:8080")}\""
+        )
     }
 
     buildTypes {
@@ -40,6 +72,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

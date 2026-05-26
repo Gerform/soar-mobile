@@ -46,11 +46,13 @@ import tech.soc.soar.shared.domain.response.usecase.CreateResponseActionUseCase
 import tech.soc.soar.shared.domain.response.usecase.DecideResponseRequestUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetResponseRequestsUseCase
 import tech.soc.soar.shared.domain.response.usecase.GetSuccessfulActionsUseCase
+import tech.soc.soar.BuildConfig
 
 object AppDependencies {
 
-    private const val AUTH_BASE_URL = "http://192.168.0.244:8000"
-    private const val ALERT_BASE_URL = "http://192.168.0.244:8080"
+    private val AUTH_BASE_URL = BuildConfig.AUTH_BASE_URL
+
+    private val ALERT_BASE_URL = BuildConfig.ALERT_BASE_URL
 
     private var initialized: Boolean = false
 
